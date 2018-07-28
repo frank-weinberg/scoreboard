@@ -234,14 +234,13 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 	private void _possiblyEndPeriod() {
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 		ClockModel jc = getClockModel(Clock.ID_JAM);
-		ClockModel lc = getClockModel(Clock.ID_LINEUP);
 		ClockModel tc = getClockModel(Clock.ID_TIMEOUT);
 
 		if (pc.isTimeAtEnd() && !pc.isRunning() && !jc.isRunning() && !tc.isRunning()) {
 			requestBatchStart();
 			setInPeriod(false);
 			setOfficialScore(false);
-			lc.stop();
+			_endLineup();
 			_startIntermission();
 			requestBatchEnd();
 		}
@@ -249,7 +248,6 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 	private void _startJam() {
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 		ClockModel jc = getClockModel(Clock.ID_JAM);
-		ClockModel lc = getClockModel(Clock.ID_LINEUP);
 		ClockModel tc = getClockModel(Clock.ID_TIMEOUT);
 		ClockModel ic = getClockModel(Clock.ID_INTERMISSION);
 
@@ -260,7 +258,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		if (tc.isRunning()) {
 			_endTimeout();
 		}
-		lc.stop();
+		_endLineup();
 		setInPeriod(true);
 		pc.start();
 		jc.startNext();
@@ -298,6 +296,13 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		lc.startNext();
 		requestBatchEnd();
 	}
+	private void _endLineup() {
+		ClockModel lc = getClockModel(Clock.ID_LINEUP);
+
+		requestBatchStart();
+		lc.stop();
+		requestBatchEnd();
+	}
 	private void _startTimeout() {
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 		ClockModel jc = getClockModel(Clock.ID_JAM);
@@ -328,7 +333,6 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 	}
 	private void _endTimeout() {
 		ClockModel tc = getClockModel(Clock.ID_TIMEOUT);
-		ClockModel lc = getClockModel(Clock.ID_LINEUP);
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 
 		requestBatchStart();
@@ -338,7 +342,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		if (pc.isTimeAtEnd()) {
 			_possiblyEndPeriod();
 		} else {
-			lc.startNext();
+			_startLineup();
 		}
 		requestBatchEnd();
 	}

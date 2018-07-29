@@ -491,7 +491,7 @@ public class DefaultScoreboardModelTests {
 		sbm.getTeamModel("2").setInJam(true);
 		sbm.getTeamModel("2").setLeadJammer(Team.LEAD_NO_LEAD);
 		
-		sbm.stopJam();
+		sbm.stopJamTO();
 		advance(0);
 		
 		assertEquals(DefaultScoreBoardModel.ACTION_STOP_JAM, sbm.snapshot.getType());
@@ -521,7 +521,7 @@ public class DefaultScoreboardModelTests {
 		sbm.setInPeriod(true);
 		sbm.setOfficialScore(true);
 		
-		sbm.stopJam();
+		sbm.stopJamTO();
 		advance(0);
 		
 		assertEquals(DefaultScoreBoardModel.ACTION_STOP_JAM, sbm.snapshot.getType());
@@ -551,7 +551,7 @@ public class DefaultScoreboardModelTests {
 		sbm.setTimeoutOwner("O");
 		sbm.setOfficialReview(true);
 		
-		sbm.stopJam();
+		sbm.stopJamTO();
 		advance(0);
 		
 		assertEquals(DefaultScoreBoardModel.ACTION_STOP_TO, sbm.snapshot.getType());
@@ -577,7 +577,7 @@ public class DefaultScoreboardModelTests {
 		tc.setNumber(3);
 		assertFalse(ic.isRunning());
 		
-		sbm.stopJam();
+		sbm.stopJamTO();
 		advance(0);
 		
 		assertEquals(DefaultScoreBoardModel.ACTION_STOP_TO, sbm.snapshot.getType());
@@ -603,7 +603,7 @@ public class DefaultScoreboardModelTests {
 		ic.setTime(880000);
 		ic.start();
 		
-		sbm.stopJam();
+		sbm.stopJamTO();
 		advance(0);
 		
 		assertEquals(DefaultScoreBoardModel.ACTION_LINEUP, sbm.snapshot.getType());
@@ -633,7 +633,7 @@ public class DefaultScoreboardModelTests {
 		ic.setNumber(1);
 		ic.start();
 		
-		sbm.stopJam();
+		sbm.stopJamTO();
 		advance(0);
 		
 		assertEquals(DefaultScoreBoardModel.ACTION_LINEUP, sbm.snapshot.getType());
@@ -653,7 +653,7 @@ public class DefaultScoreboardModelTests {
 		lc.setNumber(9);
 		lc.start();
 		
-		sbm.stopJam();
+		sbm.stopJamTO();
 		advance(0);
 		
 		assertEquals(null, sbm.snapshot);
@@ -750,7 +750,7 @@ public class DefaultScoreboardModelTests {
 		assertTrue(tc.isTimeAtStart());
 		assertFalse(ic.isRunning());
 	}
-
+	
 	@Test
 	public void testTimeout_fromTimeout() {
 		assertFalse(pc.isRunning());
@@ -987,5 +987,42 @@ public class DefaultScoreboardModelTests {
 		assertFalse(ic.isRunning());
 		assertTrue(ic.isTimeAtEnd());
 		assertEquals(pc.getMaximumNumber(), ic.getNumber());
+	}
+
+	@Test
+	public void testTimeoutInLast30s() {
+		//jam ended before 30s mark, official timeout after 30s mark
+		assertTrue(pc.isCountDirectionDown());
+		pc.setTime(35000);
+		pc.start();
+		lc.start();
+		advance(10000);
+		sbm.timeout();
+		advance(20000);
+		sbm.stopJamTO();
+		advance(0);
+		assertFalse(pc.isRunning());
+
+		//jam ended after 30s mark, official timeout
+		sbm.startJam();
+		advance(0);
+		sbm.stopJamTO();
+		assertEquals(25000, pc.getTime());
+		assertTrue(pc.isRunning());
+		advance(1000);
+		sbm.timeout();
+		advance(35000);
+		sbm.stopJamTO();
+		advance(0);
+		assertTrue(pc.isRunning());
+		
+		//follow up with team timeout
+		advance(2000);
+		sbm.setTimeoutType("1", false);
+		advance(60000);
+		sbm.stopJamTO();
+		advance(0);
+		assertFalse(pc.isRunning());
+		assertEquals(22000, pc.getTimeRemaining());
 	}
 }

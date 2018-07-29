@@ -95,7 +95,8 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		setOfficialReview(false);
 		setInPeriod(false);
 		setInOvertime(false);
-
+		restartPcAfterTimeout = false;
+		
 		settings.reset();
 	}
 
@@ -174,7 +175,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 			}
 		}
 	}
-	public void stopJam() {
+	public void stopJamTO() {
 		synchronized (runLock) {
 			ClockModel jc = getClockModel(Clock.ID_JAM);
 			ClockModel lc = getClockModel(Clock.ID_LINEUP);
@@ -183,7 +184,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 			if (jc.isRunning()) {
 				ScoreBoardManager.gameSnapshot(true);
 				createSnapshot(ACTION_STOP_JAM);
-				_endJam();
+				_endJam(false);
 			} else if (tc.isRunning()) {
 				createSnapshot(ACTION_STOP_TO);
 				_endTimeout();
@@ -213,6 +214,9 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		}
 		setTimeoutOwner(owner);
 		setOfficialReview(review);
+		if (owner != "" && owner != "O") {
+			restartPcAfterTimeout = false;
+		}
 		requestBatchEnd();
 	}
 	private void _preparePeriod() {
@@ -223,6 +227,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		requestBatchStart();
 		pc.setNumber(ic.getNumber()+1);
 		pc.resetTime();
+		restartPcAfterTimeout = false;
 		if (settings.getBoolean("ScoreBoard." + Clock.ID_JAM + ".ResetNumberEachPeriod")) {
 			jc.setNumber(jc.getMinimumNumber());
 		}
@@ -248,16 +253,10 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 	private void _startJam() {
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 		ClockModel jc = getClockModel(Clock.ID_JAM);
-		ClockModel tc = getClockModel(Clock.ID_TIMEOUT);
-		ClockModel ic = getClockModel(Clock.ID_INTERMISSION);
 
 		requestBatchStart();
-		if (ic.isRunning()) {
-			_endIntermission();
-		}
-		if (tc.isRunning()) {
-			_endTimeout();
-		}
+		_endIntermission(false);
+		_endTimeout();
 		_endLineup();
 		setInPeriod(true);
 		pc.start();
@@ -267,16 +266,21 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		getTeamModel("2").startJam();
 		requestBatchEnd();
 	}
-	private void _endJam() {
+	private void _endJam(boolean force) {
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 		ClockModel jc = getClockModel(Clock.ID_JAM);
 
+		if (!jc.isRunning() && !force) { return; }
+		
 		requestBatchStart();
 		jc.stop();
 		getTeamModel("1").stopJam();
 		getTeamModel("2").stopJam();
 		setInOvertime(false);
 
+		if (pc.getTimeRemaining() < 30000) {
+			restartPcAfterTimeout = true;
+		}
 		if (pc.isRunning()) {
 			_startLineup();
 		} else {
@@ -286,12 +290,9 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 	}
 	private void _startLineup() {
 		ClockModel lc = getClockModel(Clock.ID_LINEUP);
-		ClockModel ic = getClockModel(Clock.ID_INTERMISSION);
 
 		requestBatchStart();
-		if (ic.isRunning()) {
-			_endIntermission();
-		}
+		_endIntermission(false);
 		setInPeriod(true);
 		lc.startNext();
 		requestBatchEnd();
@@ -305,12 +306,11 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 	}
 	private void _startTimeout() {
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
-		ClockModel jc = getClockModel(Clock.ID_JAM);
-		ClockModel lc = getClockModel(Clock.ID_LINEUP);
 		ClockModel tc = getClockModel(Clock.ID_TIMEOUT);
-		ClockModel ic = getClockModel(Clock.ID_INTERMISSION);
 
+		requestBatchStart();
 		if (tc.isRunning()) {
+			//TODO: Make Official Timeout its own button that calls setTimeoutType()
 			if (getTimeoutOwner()=="") {
 				setTimeoutOwner("O");
 			} else {
@@ -319,22 +319,19 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 			return; 
 		}
 		
-		requestBatchStart();
 		pc.stop();
-		lc.stop();
-		if (jc.isRunning()) {
-			_endJam();
-		}
-		if (ic.isRunning()) {
-			_endIntermission();
-			setInPeriod(true);
-		}
+		_endLineup();
+		_endJam(false);
+		_endIntermission(false);
+		setInPeriod(true);
 		tc.startNext();
 	}
 	private void _endTimeout() {
 		ClockModel tc = getClockModel(Clock.ID_TIMEOUT);
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 
+		if (!tc.isRunning()) { return; }
+		
 		requestBatchStart();
 		tc.stop();
 		setTimeoutOwner("");
@@ -342,6 +339,9 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		if (pc.isTimeAtEnd()) {
 			_possiblyEndPeriod();
 		} else {
+			if (restartPcAfterTimeout) {
+				pc.start();
+			}
 			_startLineup();
 		}
 		requestBatchEnd();
@@ -357,10 +357,12 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		ic.start();		
 		requestBatchEnd();
 	}
-	private void _endIntermission() {
+	private void _endIntermission(boolean force) {
 		ClockModel ic = getClockModel(Clock.ID_INTERMISSION);
 		ClockModel pc = getClockModel(Clock.ID_PERIOD);
 
+		if (!ic.isRunning() && !force) { return; }
+		
 		requestBatchStart();
 		ic.stop();
 		if (ic.getTimeRemaining() < 60000 && pc.getNumber() < pc.getMaximumNumber()) {
@@ -535,6 +537,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 	protected Object timeoutOwnerLock = new Object();
 	protected boolean officialReview;
 	protected Object officialReviewLock = new Object();
+	protected boolean restartPcAfterTimeout;
 
 	protected boolean inPeriod = false;
 	protected Object inPeriodLock = new Object();
@@ -561,7 +564,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 			ClockModel jc = getClockModel(Clock.ID_JAM);
 			if (jc.isTimeAtEnd()) {
 				//clock has run down naturally
-				_endJam();
+				_endJam(true);
 			}
 		}
 	};
@@ -569,7 +572,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		public void scoreBoardChange(ScoreBoardEvent event) {
 			if (getClock(Clock.ID_INTERMISSION).isTimeAtEnd()) {
 				//clock has run down naturally
-				_endIntermission();
+				_endIntermission(true);
 			}
 		}
 	};

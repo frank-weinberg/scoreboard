@@ -71,6 +71,11 @@ public interface Team extends ScoreBoardEventProvider
 	public static final String EVENT_REMOVE_ALTERNATE_NAME = "RemoveAlternateName";
 	public static final String EVENT_ADD_COLOR = "AddColor";
 	public static final String EVENT_REMOVE_COLOR = "RemoveColor";
+	
+	public static final String SETTING_NUMBER_TIMEOUTS = "Rule.Team.Timeouts";
+	public static final String SETTING_TIMEOUTS_PER = "Rule.Team.TimeoutsPer";
+	public static final String SETTING_NUMBER_REVIEWS = "Rule.Team.OfficialReviews";
+	public static final String SETTING_REVIEWS_PER = "Rule.Team.OfficialReviewsPer";
 
 	public static interface AlternateName extends ScoreBoardEventProvider {
 		public String getId();

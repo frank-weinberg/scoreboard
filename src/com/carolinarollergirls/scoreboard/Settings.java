@@ -17,6 +17,7 @@ public interface Settings extends ScoreBoardEventProvider {
 	public String get(String k);
 	public boolean getBoolean(String k);
 	public long getLong(String k);
+	public int getInt(String k);
 	public ScoreBoardEventProvider getParent();
 
 	public static final String EVENT_SETTING = "Setting";

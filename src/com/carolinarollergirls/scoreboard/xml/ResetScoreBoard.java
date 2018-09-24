@@ -17,6 +17,7 @@ public class ResetScoreBoard extends DefaultXmlDocumentManager implements XmlDoc
 	protected void processElement(Element e) throws Exception {
 		if (Boolean.parseBoolean(editor.getText(e))) {
 			getXmlScoreBoard().reset();
+			getXmlScoreBoard().getScoreBoardModel().getSettingsModel().reset();
 			getXmlScoreBoard().loadDefaultDocuments();
 			getXmlScoreBoard().reloadViewers();
 		}

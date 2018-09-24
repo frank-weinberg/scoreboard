@@ -10,8 +10,9 @@ import java.util.Queue;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
-import com.carolinarollergirls.scoreboard.Ruleset;
 import com.carolinarollergirls.scoreboard.Settings;
 import com.carolinarollergirls.scoreboard.Team;
 import com.carolinarollergirls.scoreboard.event.ConditionalScoreBoardListener;
@@ -23,9 +24,13 @@ import com.carolinarollergirls.scoreboard.model.TeamModel;
 public class DefaultTeamModelTests {
 
 	private ScoreBoardModel sbModelMock;
-	private Ruleset ruleMock;
 	private Settings settingsMock;
 	private TeamModel otherTeamMock;
+	
+	private int maxNumberTimeouts = 3;
+	private boolean timeoutsPerPeriod = false;
+	private int maxNumberReviews = 1;
+	private boolean reviewsPerPeriod = true;
 	
 	private ScoreBoardEventProviderManager sbepm;
 	private Queue<ScoreBoardEvent> collectedEvents;
@@ -55,7 +60,6 @@ public class DefaultTeamModelTests {
 		
 		sbModelMock = Mockito.mock(DefaultScoreBoardModel.class);
 		
-		ruleMock = Mockito.mock(Ruleset.class);
 		settingsMock = Mockito.mock(Settings.class);
 		otherTeamMock = Mockito.mock(DefaultTeamModel.class);
 		
@@ -64,17 +68,45 @@ public class DefaultTeamModelTests {
 			.thenReturn(sbModelMock);
 		
 		Mockito
-			.when(sbModelMock._getRuleset())
-			.thenReturn(ruleMock);
-		
-		Mockito
 			.when(sbModelMock.getSettings())
 			.thenReturn(settingsMock);
 		
 		Mockito
 			.when(sbModelMock.getTeamModel(Mockito.anyString()))
 			.thenReturn(otherTeamMock);
-		
+
+		Mockito
+			.when(settingsMock.getInt(Team.SETTING_NUMBER_TIMEOUTS))
+			.thenAnswer(new Answer<Integer>() {
+				public Integer answer(InvocationOnMock invocation) throws Throwable {
+					return maxNumberTimeouts;
+				}
+			});
+	
+		Mockito
+			.when(settingsMock.getBoolean(Team.SETTING_TIMEOUTS_PER))
+			.thenAnswer(new Answer<Boolean>() {
+				public Boolean answer(InvocationOnMock invocation) throws Throwable {
+					return timeoutsPerPeriod;
+				}
+			});
+
+		Mockito
+			.when(settingsMock.getInt(Team.SETTING_NUMBER_REVIEWS))
+			.thenAnswer(new Answer<Integer>() {
+				public Integer answer(InvocationOnMock invocation) throws Throwable {
+					return maxNumberReviews;
+				}
+			});
+	
+		Mockito
+			.when(settingsMock.getBoolean(Team.SETTING_REVIEWS_PER))
+			.thenAnswer(new Answer<Boolean>() {
+				public Boolean answer(InvocationOnMock invocation) throws Throwable {
+					return reviewsPerPeriod;
+				}
+			});
+	
 		team = new DefaultTeamModel(sbModelMock, ID);
 		DefaultClockModel.updateClockTimerTask.setPaused(true);
 }
@@ -352,7 +384,7 @@ public class DefaultTeamModelTests {
 	@Test
 	public void testSetTimeouts() {
 		team.addScoreBoardListener(new ConditionalScoreBoardListener(team, Team.EVENT_TIMEOUTS, listener));
-		team.maximumTimeouts = 5;
+		maxNumberTimeouts = 5;
 		
 		team.setTimeouts(4);
 		advance(0);
@@ -391,7 +423,7 @@ public class DefaultTeamModelTests {
 	@Test
 	public void testSetOfficialReviews() {
 		team.addScoreBoardListener(new ConditionalScoreBoardListener(team, Team.EVENT_OFFICIAL_REVIEWS, listener));
-		team.maximumOfficialReviews = 5;
+		maxNumberReviews = 5;
 		
 		team.setOfficialReviews(4);
 		advance(0);
@@ -416,7 +448,7 @@ public class DefaultTeamModelTests {
 	@Test
 	public void testChangeOfficialReviews() {
 		team.addScoreBoardListener(new ConditionalScoreBoardListener(team, Team.EVENT_OFFICIAL_REVIEWS, listener));
-		team.maximumOfficialReviews = 3;
+		maxNumberReviews = 3;
 		assertEquals(1, team.getOfficialReviews());
 
 		team.changeOfficialReviews(2);
@@ -460,7 +492,7 @@ public class DefaultTeamModelTests {
 		assertTrue(events.contains(Team.EVENT_OFFICIAL_REVIEWS));
 		assertTrue(events.contains(Team.EVENT_RETAINED_OFFICIAL_REVIEW));
 
-		team.maximumOfficialReviews = 2;
+		maxNumberReviews = 2;
 		team.setInTimeout(true);
 		team.setInOfficialReview(true);
 		team.setRetainedOfficialReview(true);
@@ -486,9 +518,9 @@ public class DefaultTeamModelTests {
 		assertTrue(events.contains(Team.EVENT_OFFICIAL_REVIEWS));
 		assertTrue(events.contains(Team.EVENT_RETAINED_OFFICIAL_REVIEW));
 	
-		team.maximumTimeouts = 4;
-		team.timeoutsPerPeriod = true;
-		team.officialReviewsPerPeriod = false;
+		maxNumberTimeouts = 4;
+		timeoutsPerPeriod = true;
+		reviewsPerPeriod = false;
 		team.setRetainedOfficialReview(true);
 		team.setTimeouts(1);
 		team.setOfficialReviews(0);

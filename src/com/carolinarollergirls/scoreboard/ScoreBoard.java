@@ -82,4 +82,39 @@ public interface ScoreBoard extends ScoreBoardEventProvider
 	public static final String EVENT_ADD_TEAM = "AddTeam";
 	public static final String EVENT_REMOVE_TEAM = "RemoveTeam";
 	public static final String EVENT_SETTING = "Setting";
+
+	public static final String SETTING_AUTO_START = "Operator.AutoStart";
+	public static final String SETTING_AUTO_START_BUFFER = "Operator.AutoStartBuffer";
+	public static final String SETTING_LINEUP_AFTER_TIMEOUT = "ScoreBoard.Clock.LineupAfterTimeout";
+	public static final String SETTING_NUMBER_PERIODS = "Rule." + Clock.ID_PERIOD + ".Number";
+	public static final String SETTING_PERIOD_DURATION = "Rule." + Clock.ID_PERIOD + ".Duration";
+	public static final String SETTING_JAM_NUMBER_PER_PERIOD = "Rule." + Clock.ID_JAM + ".ResetNumberEachPeriod";
+	public static final String SETTING_JAM_DURATION = "Rule." + Clock.ID_JAM + ".Duration";
+	public static final String SETTING_LINEUP_DURATION = "Rule." + Clock.ID_LINEUP + ".Duration";
+	public static final String SETTING_OVERTIME_LINEUP_DURATION = "Rule." + Clock.ID_LINEUP + ".OvertimeDuration";
+	public static final String SETTING_INTERMISSION_DURATION = "Rule." + Clock.ID_INTERMISSION+ ".Duration";
+	
+	public static final String AUTO_START_DISABLED = "Off";
+	public static final String AUTO_START_JAM = "Jam";
+	public static final String AUTO_START_TIMEOUT = "Timeout";
+	
+	public static final String ACTION_START_JAM = "Start Jam";
+	public static final String ACTION_STOP_JAM = "Stop Jam";
+	public static final String ACTION_STOP_TO = "End Timeout";
+	public static final String ACTION_LINEUP = "Lineup";
+	public static final String ACTION_TIMEOUT = "Timeout";
+	public static final String ACTION_OVERTIME = "Overtime";
+	public static final String ACTION_NONE = "";
+	public static final String UNDO_PREFIX = "Un-";
+
+	public static final String BUTTON_START = "ScoreBoard.Button.StartLabel";
+	public static final String BUTTON_UNSTART = "ScoreBoard.Button.UnStartLabel";
+	public static final String BUTTON_STOP = "ScoreBoard.Button.StopLabel";
+	public static final String BUTTON_UNSTOP = "ScoreBoard.Button.UnStopLabel";
+	public static final String BUTTON_TIMEOUT = "ScoreBoard.Button.TimeoutLabel";
+	public static final String BUTTON_UNTIMEOUT = "ScoreBoard.Button.UnTimeoutLabel";
+	public static final String BUTTON_UNDO = "ScoreBoard.Button.UndoLabel";
+
+	public static final String TIMEOUT_OWNER_OTO = "O";
+	public static final String TIMEOUT_OWNER_NONE = "";
 }

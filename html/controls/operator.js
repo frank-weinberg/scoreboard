@@ -45,6 +45,7 @@ $sb(function() {
 function initialLogin() {
 	var operator = _windowFunctions.getParam("operator");
 	if (operator) {
+		setOperatorSettingsToDefault();
 		login(operator);
 	} else {
 		logout();
@@ -71,6 +72,48 @@ function logout() {
 			return false;
 		login(value);
 		return true;
+	});
+}
+
+function createSettingsDialog(settings, prefix, title, cssClass, introtext, width) {
+	var dialog = $("<div>");
+	var table = $("<table>").appendTo(dialog).addClass(cssClass);
+
+	$("<span>").text(introtext).appendTo($("<td colspan=2>").appendTo($("<tr>").appendTo(table)));
+
+	$.each( settings, function(i, setting) {
+		var path = "ScoreBoard.Settings.Setting(" + prefix + setting.id + ")";
+		var row = $("<tr>").appendTo(table);
+		$("<td>").addClass("Name").text(setting.display).appendTo(row);
+		var options = {};
+		if (setting.type == "time") {
+			options.sbelement = { convert: _timeConversions.msToMinSec };
+			options.sbcontrol = { convert: _timeConversions.minSecToMs };
+		}
+		if (setting.type == "boolean") {
+			$sb(path).$sbControl($("<select>"), { sbelement: {
+				prependOptions: [
+					{ text: "Yes", value: "true" },
+					{ text: "No", value: "false" }
+			]}})
+			.appendTo($("<td>").addClass("Value").appendTo(row));			
+		} else if (setting.type == "select") {
+			$sb(path).$sbControl($("<select>"), { sbelement: {
+				prependOptions: setting.values
+			}})
+			.appendTo($("<td>").addClass("Value").appendTo(row));						
+		} else {
+			$sb(path).$sbControl($("<input>").attr("type", "text"), options)
+				.appendTo($("<td>").addClass("Value").appendTo(row));
+		}
+	});
+
+	return $("<div>").append(table).dialog({
+		title: title,
+		autoOpen: false,
+		width: width,
+		modal: true,
+		buttons: { Close: function() { $(this).dialog("close"); } },
 	});
 }
 
@@ -137,7 +180,9 @@ function createMetaControlTable() {
 	var periodEndTd = createRowTable(1)
 		.appendTo(table.find(">tbody>tr:eq(2)").addClass("PeriodEnd Hidden").children("td"))
 		.find("tr>td");
-
+	var rulesOverrideDialog = createRuleOverridesDialog();
+	var operatorSettingsDialog = createOperatorSettingsDialog();
+	
 	$("<label>").text("Edit Key Control").attr("for", "EditKeyControlButton")
 		.appendTo(buttonsTd);
 	$("<input type='checkbox'>").attr("id", "EditKeyControlButton")
@@ -150,11 +195,16 @@ function createMetaControlTable() {
 	$("<a>").text("Key Control Edit mode enabled.	 Buttons do not operate in this mode.	 Move the mouse over a button, then press a normal key (not ESC, Enter, F1, etc.) to assign.")
 		.appendTo(helpTd);
 
+	$("<button>").text("Rule Overrides")
+		.appendTo(buttonsTd)
+		.button()
+		.click(function() { ruleOverridesDialog.dialog("open"); });
+	
 	$("<button>").text("Operator Settings")
 		.appendTo(buttonsTd)
 		.button()
-		.click(createOperatorSettingsDialog);
-
+		.click(function() { operatorSettingsDialog.dialog("open"); });
+	
 	$("<button>").attr("id", "GameControl")
 		.text("Start New Game")
 		.addClass('clickMe')
@@ -417,6 +467,31 @@ function createOvertimeDialog() {
 	});
 }
 
+function createRuleOverridesDialog() {
+	var rules = [
+		{ id: "Clock.Period.MaximumNumber", display: "Number of Periods", type: "text" },
+		{ id: "Clock.Period.MaximumTime", display: "Duration of a Period", type: "time" },
+		{ id: "Rule.Jam.ResetNumberEachPeriod", display: "Reset Jam Number each Period", type: "boolean" },
+		{ id: "Clock.Jam.MaximumTime", display: "Duration of a Jam", type: "time" },
+		{ id: "Rule.Lineup.Duration", display: "Duration of Lineup", type: "time" },
+		{ id: "Rule.Lineup.OvertimeDuration", display: "Duration of Lineup before an Overtime Jam", type: "time" },
+		{ id: "Rule.Intermission.Duration", display: "Duration of an Intermission", type: "time" },
+		{ id: "Rule.Team.Timeouts", display: "Number of Timeouts", type: "text" },
+		{ id: "Rule.Team.TimeoutsPer", display: "Timeouts are per", type: "select", values: [
+			{text: "Period", value: "true"},
+			{text: "Game", value: "false"}
+		]},
+		{ id: "Rule.Team.OfficialReviews", display: "Number of Official Reviews", type: "text" },
+		{ id: "Rule.Team.OfficialReviewsPer", display: "Official Reviews are per", type: "select", values: [
+			{text: "Period", value: "true"},
+			{text: "Game", value: "false"}
+		]}
+	];
+
+	return createSettingsDialog(rules, "", "Rule Overrides", "RuleOverridesDialog", 
+			"Whenever you start a new game, these settings will be reset according to the chosen ruleset.", "600px");
+}
+
 var operatorSettings = [
 	{ id: "ShowUndo", display: "Show UNDO Controls", type: "select", values: [
 			{ text:"None", value: "0" }, 
@@ -426,10 +501,10 @@ var operatorSettings = [
 			$("#TeamTime").find(".UndoControls").toggleClass("ShowUndo", value == "3");
 			$("#TeamTime").find(".SingleUndoControl").toggleClass("ShowUndo", value == "1");
 		}},
-	{ id: "ShowSpeedScore", display: "Show Speed Score Controls", type: "boolean", defaultValue: "False", func: function(value) {
+	{ id: "ShowSpeedScore", display: "Show Speed Score Controls", type: "boolean", defaultValue: "false", func: function(value) {
 		$("#TeamTime").find("tr.SpeedScore").toggleClass("Show", isTrue(value));
 	}},
-	{ id: "ShowStartStop", display: "Show Start/Stop Buttons", type: "boolean", defaultValue: "False", func: function(value) {
+	{ id: "ShowStartStop", display: "Show Start/Stop Buttons", type: "boolean", defaultValue: "false", func: function(value) {
 		$("#TeamTime").find("tr.Control").toggleClass("Show", isTrue(value));
 	}},
 	{ id: "AutoStart", display: "Auto start Jam or Timeout after lineup time is up", type: "select", values: [
@@ -461,36 +536,8 @@ function loadOperatorSettings(path) {
 }
 
 function createOperatorSettingsDialog() {
-	var dialog = $("<div>");
-	$("<span>").text("These settings will be stored under your login.").appendTo(dialog);
-
-	var table = $("<table>").appendTo(dialog).addClass("OperatorSettingsDialog");
-
 	$.each( operatorSettings, function(i, setting) {
 		var path = "ScoreBoard.Settings.Setting(Operator." + setting.id + ")";
-		var row = $("<tr>").appendTo(table);
-		$("<td>").addClass("Name").text(setting.display).appendTo(row);
-		var options = {};
-		if (setting.type == "time") {
-			options.sbelement = { convert: _timeConversions.msToMinSec };
-			options.sbcontrol = { convert: _timeConversions.minSecToMs };
-		}
-		if (setting.type == "boolean") {
-			$sb(path).$sbControl($("<select>"), { sbelement: {
-				prependOptions: [
-					{ text: "Yes", value: "True" },
-					{ text: "No", value: "False" }
-			]}})
-			.appendTo($("<td>").addClass("Value").appendTo(row));			
-		} else if (setting.type == "select") {
-			$sb(path).$sbControl($("<select>"), { sbelement: {
-				prependOptions: setting.values
-			}})
-			.appendTo($("<td>").addClass("Value").appendTo(row));						
-		} else {
-			$sb(path).$sbControl($("<input>").attr("type", "text"), options)
-				.appendTo($("<td>").addClass("Value").appendTo(row));
-		}
 		$sb(path).$sbBindAndRun("sbchange", function(event, value) {
 			var perOperatorPath = "Pages.Page(operator.html).Operator("+$("#operatorId").text()+").Setting("+setting.id+")";
 			$sb(perOperatorPath).$sbSet(value);
@@ -498,13 +545,8 @@ function createOperatorSettingsDialog() {
 		})
 	});
 
-	return $("<div>").append(table).dialog({
-		title: "Operator Settings",
-		width: "600px",
-		modal: true,
-		buttons: { Close: function() { $(this).dialog("close"); } },
-		close: function() { $(this).dialog("destroy").remove(); }
-	});
+	return createSettingsDialog(operatorSettings, "Operator.", "Operator Settings", "OperatorSettingsDialog", 
+			"These settings will be stored under your login.", "600px");
 }
 
 function createJamControlTable() {
@@ -565,7 +607,7 @@ function createJamControlTable() {
 	$sb("ScoreBoard.Settings.Setting(ScoreBoard.Button.UndoLabel)").$sbBindAndRun("sbchange", function(event, val) {
 		undoButton.find("span.Label").html(val);
 		});
-	controlsTr.children("td:eq(3)").addClass("SingleUndoControl");
+	controlsTr.children("td:eq(3)").addClass("SingleUndoControl ShowUndo");
 	undoButton.appendTo(controlsTr.children("td:eq(3)"));
 	
 	return table;
@@ -1145,9 +1187,9 @@ function createScoreBoardViewPreviewRows(table, type) {
 
 //FIXME - this intermission control should not be on the View tab,
 //FIXME - it should be on the policy or scoreboard operation/behavior tab
-	var intermissionControlDialog = createIntermissionControlDialog();
-	var intermissionControlButton = $("<button>Intermission Control</button>").button().addClass("ui-button-small")
-		.click(function() { intermissionControlDialog.dialog("open"); });
+	var clockIntermissionDialog = createClockIntermissionDialog();
+	var clockIntermissionButton = $("<button>Clocks & Intermissions</button>").button().addClass("ui-button-small")
+		.click(function() { clockIntermissionDialog.dialog("open"); });
 	var swapTeamsButton = $("<label/><input type='checkbox'/>");
 	$sb("ScoreBoard.Settings.Setting(ScoreBoard." + type + "_SwapTeams)").$sbControl(swapTeamsButton, { sbcontrol: {
 			button: true
@@ -1220,7 +1262,7 @@ function createScoreBoardViewPreviewRows(table, type) {
 	$("<tr><td></td></tr>").addClass(type).appendTo(table).find("td").append(optionsTable);
 	$("<tr><td/><td/><td/></tr>").addClass(type).appendTo(optionsTable)
 		.find("td").addClass("ScoreBoardOptions Footer")
-		.first().append(intermissionControlButton)
+		.first().append(clockIntermissionButton)
 		.next().append(backgroundStyle)
 		.next().append(imageViewSelect);
 	$("<tr><td/><td/><td/></tr>").addClass(type).appendTo(optionsTable)
@@ -1236,36 +1278,21 @@ function createScoreBoardViewPreviewRows(table, type) {
 	
 }
 
-function createIntermissionControlDialog() {
-	var table = $("<table>").addClass("IntermissionControlDialog");
-
-	var fields = [
-		{ id: "ScoreBoard.Intermission.PreGame", display: "Pre Game", type: "text" },
-		{ id: "ScoreBoard.Intermission.Intermission", display: "Intermission", type: "text" },
-		{ id: "ScoreBoard.Intermission.Unofficial", display: "Unofficial Score", type: "text" },
-		{ id: "ScoreBoard.Intermission.Official", display: "Official Score", type: "text" },
-		{ id: "Clock.Intermission.Time", display: "Time", type: "time" }
+function createClockIntermissionDialog() {
+	var clockIntermissionSettings = [
+		{ id: "Clock.Sync", display: "Sync Clocks", type: "boolean" },
+		{ id: "Clock.LineupAfterTimeout", display: "Clock Shown Between Timeouts and Next Jam", type: "select", values: [
+			{text: "Lineup", value: "true"},
+			{text: "Timeout", value: "false"}
+		]},
+		{ id: "Intermission.PreGame", display: "Pre Game Display Text", type: "text" },
+		{ id: "Intermission.Intermission", display: "Intermission Display Text", type: "text" },
+		{ id: "Intermission.Unofficial", display: "Unofficial Score Display Text", type: "text" },
+		{ id: "Intermission.Official", display: "Official Score Display Text", type: "text" },
 	];
-	$.each( fields, function(i, field) {
-		var path = "ScoreBoard.Settings.Setting(" + field.id + ")";
-		var row = $("<tr>").appendTo(table);
-		$("<td>").addClass("Name").text(field.display).appendTo(row);
-		var options = {};
-		if (field.type == "time") {
-			options.sbelement = { convert: _timeConversions.msToMinSec };
-			options.sbcontrol = { convert: _timeConversions.minSecToMs };
-		}
-		$sb(path).$sbControl($("<input>").attr("type", "text"), options)
-			.appendTo($("<td>").addClass("Value").appendTo(row));
-	});
 
-	return $("<div>").append(table).dialog({
-		title: "Intermission Display Controls",
-		autoOpen: false,
-		width: 700,
-		modal: true,
-		buttons: { Close: function() { $(this).dialog("close"); } }
-	});
+	return createSettingsDialog(clockIntermissionSettings, "ScoreBoard.", "Clock Settings & Intermission Labels", 
+			"IntermissionControlDialog", "These settings will only be reset by a complete socreboard reset.", "700px");
 }
 
 

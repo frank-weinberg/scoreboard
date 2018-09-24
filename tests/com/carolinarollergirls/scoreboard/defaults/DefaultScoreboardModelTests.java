@@ -69,7 +69,7 @@ public class DefaultScoreboardModelTests {
 		collectedEvents = new LinkedList<ScoreBoardEvent>();
 		sbm.addScoreBoardListener(batchCounter);
 		//Clock Sync can cause clocks to be changed when started, breaking tests.
-		sbm.getSettingsModel().set("ScoreBoard.Clock.Sync", "False");
+		sbm.getSettingsModel().set(Clock.SETTING_CLOCK_SYNC, "False");
 	}
 	
 	@After
@@ -551,7 +551,7 @@ public class DefaultScoreboardModelTests {
 		assertFalse(tc.isRunning());
 		assertTrue(ic.isRunning());
 		assertEquals(2, ic.getNumber());
-		assertEquals(sbm.getSettings().getLong("Clock." + Clock.ID_INTERMISSION + ".Time"), ic.getMaximumTime());
+		assertEquals(sbm.getSettings().getLong(ScoreBoard.SETTING_INTERMISSION_DURATION), ic.getMaximumTime());
 		assertTrue(ic.isTimeAtStart());
 		assertFalse(sbm.isInPeriod());
 		assertFalse(sbm.isOfficialScore());
@@ -559,6 +559,7 @@ public class DefaultScoreboardModelTests {
 
 	@Test
 	public void testStopJam_endTimeoutDuringPeriod() {
+		sbm.getSettingsModel().set(DefaultScoreBoardModel.SETTING_LINEUP_AFTER_TIMEOUT, "true");
 		assertFalse(pc.isRunning());
 		assertFalse(pc.isTimeAtEnd());
 		assertFalse(jc.isRunning());

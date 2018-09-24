@@ -9,9 +9,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.carolinarollergirls.scoreboard.Ruleset;
+import com.carolinarollergirls.scoreboard.Settings;
 import com.carolinarollergirls.scoreboard.Position;
 import com.carolinarollergirls.scoreboard.SkaterNotFoundException;
+import com.carolinarollergirls.scoreboard.Team;
 import com.carolinarollergirls.scoreboard.model.PositionModel;
 import com.carolinarollergirls.scoreboard.model.ScoreBoardModel;
 import com.carolinarollergirls.scoreboard.model.SkaterModel;
@@ -23,7 +24,7 @@ public class DefaultPositionModelTests {
 	private final String thirdId = "5df0a35b-aaa6-4c30-93ef-07ba4f174cdc";
 	
 	private ScoreBoardModel sbModelMock;
-	private Ruleset ruleMock;
+	private Settings settingsMock;
 	private TeamModel teamModel;
 	private SkaterModel first;
 	private SkaterModel second;
@@ -33,16 +34,32 @@ public class DefaultPositionModelTests {
 	public void setup() {
 		sbModelMock = Mockito.mock(DefaultScoreBoardModel.class);
 		
-		ruleMock = Mockito.mock(Ruleset.class);
+		settingsMock = Mockito.mock(Settings.class);
 		
 		Mockito
 			.when(sbModelMock.getScoreBoard())
 			.thenReturn(sbModelMock);
 		
 		Mockito
-			.when(sbModelMock._getRuleset())
-			.thenReturn(ruleMock);
+			.when(sbModelMock.getSettings())
+			.thenReturn(settingsMock);
+
+		Mockito
+			.when(settingsMock.getInt(Team.SETTING_NUMBER_TIMEOUTS))
+			.thenReturn(3);
+
+		Mockito
+			.when(settingsMock.getBoolean(Team.SETTING_TIMEOUTS_PER))
+			.thenReturn(false);
+
+		Mockito
+			.when(settingsMock.getInt(Team.SETTING_NUMBER_REVIEWS))
+			.thenReturn(1);
 		
+		Mockito
+			.when(settingsMock.getBoolean(Team.SETTING_REVIEWS_PER))
+			.thenReturn(true);
+
 		teamModel = new DefaultTeamModel(sbModelMock, "A");
 		
 		first = new DefaultSkaterModel(teamModel, firstId, "First","123", "");

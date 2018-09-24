@@ -40,36 +40,22 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 
 	protected void setupScoreBoard(){
 		settings = new DefaultSettingsModel(this, this);
-		Ruleset.registerRule(settings, "ScoreBoard." + Clock.ID_INTERMISSION + ".PreGame");
-		Ruleset.registerRule(settings, "ScoreBoard." + Clock.ID_INTERMISSION + ".Intermission");
-		Ruleset.registerRule(settings, "ScoreBoard." + Clock.ID_INTERMISSION + ".Unofficial");
-		Ruleset.registerRule(settings, "ScoreBoard." + Clock.ID_INTERMISSION + ".Official");
-		Ruleset.registerRule(settings, "ScoreBoard.Clock.Sync");
-		Ruleset.registerRule(settings, "ScoreBoard." + Clock.ID_JAM + ".ResetNumberEachPeriod");
-		Ruleset.registerRule(settings, "Clock." + Clock.ID_INTERMISSION + ".Time");
-		Ruleset.registerRule(settings, "Clock." + Clock.ID_LINEUP + ".Time");
-		Ruleset.registerRule(settings, "Clock." + Clock.ID_LINEUP + ".OvertimeTime");
+		settings.addRuleMapping(SETTING_NUMBER_PERIODS, new String[] {"Clock." + Clock.ID_PERIOD + ".MaximumNumber", "Clock." + Clock.ID_INTERMISSION + ".MaximumNumber"});
+		settings.addRuleMapping(SETTING_PERIOD_DURATION, new String[] {"Clock." + Clock.ID_PERIOD + ".MaximumTime"});
+		settings.addRuleMapping(SETTING_JAM_DURATION, new String[] {"Clock." + Clock.ID_JAM + ".MaximumTime"});
 
-		settings.addRuleMapping("ScoreBoard.BackgroundStyle", new String[] { "ScoreBoard.Preview_BackgroundStyle", "ScoreBoard.View_BackgroundStyle" });
-		settings.addRuleMapping("ScoreBoard.BoxStyle",        new String[] { "ScoreBoard.Preview_BoxStyle",        "ScoreBoard.View_BoxStyle" });
-		settings.addRuleMapping("ScoreBoard.CurrentView",     new String[] { "ScoreBoard.Preview_CurrentView",     "ScoreBoard.View_CurrentView" });
-		settings.addRuleMapping("ScoreBoard.CustomHtml",      new String[] { "ScoreBoard.Preview_CustomHtml",      "ScoreBoard.View_CustomHtml" });
-		settings.addRuleMapping("ScoreBoard.HideJamTotals",   new String[] { "ScoreBoard.Preview_HideJamTotals",   "ScoreBoard.View_HideJamTotals" });
-		settings.addRuleMapping("ScoreBoard.Image",           new String[] { "ScoreBoard.Preview_Image",           "ScoreBoard.View_Image" });
-		settings.addRuleMapping("ScoreBoard.SidePadding",     new String[] { "ScoreBoard.Preview_SidePadding",     "ScoreBoard.View_SidePadding" });
-		settings.addRuleMapping("ScoreBoard.SwapTeams",       new String[] { "ScoreBoard.Preview_SwapTeams",       "ScoreBoard.View_SwapTeams" });
-		settings.addRuleMapping("ScoreBoard.Video",           new String[] { "ScoreBoard.Preview_Video",           "ScoreBoard.View_Video" });
-
-		Ruleset.registerRule(settings, "ScoreBoard.BackgroundStyle");
-		Ruleset.registerRule(settings, "ScoreBoard.BoxStyle");
-		Ruleset.registerRule(settings, "ScoreBoard.CurrentView");
-		Ruleset.registerRule(settings, "ScoreBoard.CustomHtml");
-		Ruleset.registerRule(settings, "ScoreBoard.HideJamTotals");
-		Ruleset.registerRule(settings, "ScoreBoard.Image");
-		Ruleset.registerRule(settings, "ScoreBoard.SidePadding");
-		Ruleset.registerRule(settings, "ScoreBoard.SwapTeams");
-		Ruleset.registerRule(settings, "ScoreBoard.Video");
-		Ruleset.registerRule(settings, PenaltyCodesManager.PenaltiesFileSetting);
+		Ruleset.registerRule(settings, SETTING_NUMBER_PERIODS);
+		Ruleset.registerRule(settings, SETTING_PERIOD_DURATION);
+		Ruleset.registerRule(settings, SETTING_JAM_NUMBER_PER_PERIOD);
+		Ruleset.registerRule(settings, SETTING_JAM_DURATION);
+		Ruleset.registerRule(settings, SETTING_LINEUP_DURATION);
+		Ruleset.registerRule(settings, SETTING_OVERTIME_LINEUP_DURATION);
+		Ruleset.registerRule(settings, SETTING_INTERMISSION_DURATION);
+		Ruleset.registerRule(settings, Team.SETTING_NUMBER_TIMEOUTS);
+		Ruleset.registerRule(settings, Team.SETTING_TIMEOUTS_PER);
+		Ruleset.registerRule(settings, Team.SETTING_NUMBER_REVIEWS);
+		Ruleset.registerRule(settings, Team.SETTING_REVIEWS_PER);
+		Ruleset.registerRule(settings, PenaltyCodesManager.SETTING_PENALTIES_FILE);
 
 		stats = new DefaultStatsModel(this);
 		stats.addScoreBoardListener(this);
@@ -103,7 +89,6 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		restartPcAfterTimeout = false;
 		snapshot = null;
 		
-		settings.reset();
 		stats.reset();
 		
 		setLabel(BUTTON_START, ACTION_START_JAM);
@@ -141,7 +126,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		}
 		ClockModel lc = getClockModel(Clock.ID_LINEUP);
 		if (!o && lc.isCountDirectionDown()) {
-			lc.setMaximumTime(settings.getLong("Clock." + Clock.ID_LINEUP + ".Time"));
+			lc.setMaximumTime(settings.getLong(SETTING_LINEUP_DURATION));
 		}
 	}
 	public void startOvertime() {
@@ -162,7 +147,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 			requestBatchStart();
 			setInOvertime(true);
 			_endTimeout();
-			long otLineupTime = settings.getLong("Clock." + Clock.ID_LINEUP + ".OvertimeTime");
+			long otLineupTime = settings.getLong(SETTING_OVERTIME_LINEUP_DURATION);
 			if (lc.getMaximumTime() < otLineupTime) {
 				lc.setMaximumTime(otLineupTime);
 			}
@@ -243,7 +228,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		pc.setNumber(ic.getNumber()+1);
 		pc.resetTime();
 		restartPcAfterTimeout = false;
-		if (settings.getBoolean("ScoreBoard." + Clock.ID_JAM + ".ResetNumberEachPeriod")) {
+		if (settings.getBoolean(SETTING_JAM_NUMBER_PER_PERIOD)) {
 			jc.setNumber(jc.getMinimumNumber());
 		}
 		for (TeamModel t : getTeamModels()) {
@@ -258,6 +243,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 
 		if (pc.isTimeAtEnd() && !pc.isRunning() && !jc.isRunning() && !tc.isRunning()) {
 			requestBatchStart();
+			setLabels(ACTION_START_JAM, ACTION_LINEUP, ACTION_TIMEOUT);
 			setInPeriod(false);
 			setOfficialScore(false);
 			_endLineup();
@@ -360,7 +346,9 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 			if (restartPcAfterTimeout) {
 				pc.start();
 			}
-			_startLineup();
+			if (settings.getBoolean(SETTING_LINEUP_AFTER_TIMEOUT)) {
+				_startLineup();
+			}
 		}
 		requestBatchEnd();
 	}
@@ -370,7 +358,7 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 
 		requestBatchStart();
 		ic.setNumber(pc.getNumber());
-		ic.setMaximumTime(settings.getLong("Clock." + Clock.ID_INTERMISSION + ".Time"));
+		ic.setMaximumTime(settings.getLong(SETTING_INTERMISSION_DURATION));
 		ic.resetTime();
 		ic.start();		
 		requestBatchEnd();
@@ -398,8 +386,8 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		
 		long bufferTime = settings.getLong(SETTING_AUTO_START_BUFFER); 
 		long triggerTime = bufferTime + (isInOvertime() ? 
-					settings.getLong("Clock." + Clock.ID_LINEUP + ".OvertimeTime") :
-					settings.getLong("Clock." + Clock.ID_LINEUP + ".Time"));
+					settings.getLong(SETTING_OVERTIME_LINEUP_DURATION) :
+					settings.getLong(SETTING_LINEUP_DURATION));
 
 		requestBatchStart();
 		if (lc.getTimeElapsed() >= triggerTime) {
@@ -716,32 +704,6 @@ public class DefaultScoreBoardModel extends DefaultScoreBoardEventProvider imple
 		protected Map<String, TeamModel.TeamSnapshotModel> teamSnapshots;
 	}
 
-	public static final String TIMEOUT_OWNER_OTO = "O";
-	public static final String TIMEOUT_OWNER_NONE = "";
 	public static final String DEFAULT_TIMEOUT_OWNER = TIMEOUT_OWNER_NONE;
-
-	public static final String SETTING_AUTO_START = "Operator.AutoStart";
-	public static final String SETTING_AUTO_START_BUFFER = "Operator.AutoStartBuffer";
-
-	public static final String BUTTON_START = "ScoreBoard.Button.StartLabel";
-	public static final String BUTTON_UNSTART = "ScoreBoard.Button.UnStartLabel";
-	public static final String BUTTON_STOP = "ScoreBoard.Button.StopLabel";
-	public static final String BUTTON_UNSTOP = "ScoreBoard.Button.UnStopLabel";
-	public static final String BUTTON_TIMEOUT = "ScoreBoard.Button.TimeoutLabel";
-	public static final String BUTTON_UNTIMEOUT = "ScoreBoard.Button.UnTimeoutLabel";
-	public static final String BUTTON_UNDO = "ScoreBoard.Button.UndoLabel";
-	
-	public static final String ACTION_START_JAM = "Start Jam";
-	public static final String ACTION_STOP_JAM = "Stop Jam";
-	public static final String ACTION_STOP_TO = "End Timeout";
-	public static final String ACTION_LINEUP = "Lineup";
-	public static final String ACTION_TIMEOUT = "Timeout";
-	public static final String ACTION_OVERTIME = "Overtime";
-	public static final String ACTION_NONE = "";
-	public static final String UNDO_PREFIX = "Un-";
-
-	public static final String AUTO_START_DISABLED = "Off";
-	public static final String AUTO_START_JAM = "Jam";
-	public static final String AUTO_START_TIMEOUT = "Timeout";
 }
 

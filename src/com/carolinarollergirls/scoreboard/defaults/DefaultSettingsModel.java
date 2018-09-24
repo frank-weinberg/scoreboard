@@ -14,7 +14,9 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
+import com.carolinarollergirls.scoreboard.Clock;
 import com.carolinarollergirls.scoreboard.Ruleset;
+import com.carolinarollergirls.scoreboard.ScoreBoard;
 import com.carolinarollergirls.scoreboard.Settings;
 import com.carolinarollergirls.scoreboard.event.ScoreBoardEvent;
 import com.carolinarollergirls.scoreboard.model.ScoreBoardModel;
@@ -51,7 +53,42 @@ public class DefaultSettingsModel extends DefaultScoreBoardEventProvider impleme
 				set(k, null);
 			}
 		}
+		setDefaults();
 		sbm._getRuleset().apply(true, this);
+	}
+	
+	private void setDefaults() {
+		set(Clock.SETTING_CLOCK_SYNC, "true");
+		set(ScoreBoard.SETTING_LINEUP_AFTER_TIMEOUT, "true");
+		set("ScoreBoard.Intermission.PreGame", "Time To Derby");
+		set("ScoreBoard.Intermission.Intermission", "Intermission");
+		set("ScoreBoard.Intermission.Unofficial", "Unofficial Score");
+		set("ScoreBoard.Intermission.Official", "Final Score");
+		set("ScoreBoard.View_HideJamTotals", "false");
+		set("ScoreBoard.View_BackgroundStyle", "bg_black");
+		set("ScoreBoard.View_BoxStyle", "box_flat");
+		set("ScoreBoard.View_SwapTeams", "false");
+		set("ScoreBoard.View_SidePadding", "0");
+		set("ScoreBoard.View_CurrentView", "scoreboard");
+		set("ScoreBoard.View_CustomHTML", "/customhtml/fullscreen/example.html");
+		set("ScoreBoard.View_Image", "/images/fullscreen/American Flag.jpg");
+		set("ScoreBoard.View_Video", "/videos/fullscreen/American Flag.webm");
+		set("ScoreBoard.Preview_HideJamTotals", "false");
+		set("ScoreBoard.Preview_BackgroundStyle", "bg_black");
+		set("ScoreBoard.Preview_BoxStyle", "box_flat");
+		set("ScoreBoard.Preview_SwapTeams", "false");
+		set("ScoreBoard.Preview_SidePadding", "0");
+		set("ScoreBoard.Preview_CurrentView", "scoreboard");
+		set("ScoreBoard.Preview_CustomHTML", "/customhtml/fullscreen/example.html");
+		set("ScoreBoard.Preview_Image", "/images/fullscreen/American Flag.jpg");
+		set("ScoreBoard.Preview_Video", "/videos/fullscreen/American Flag.webm");
+		set("ScoreBoard.Overlay.TeamLogos", "true");
+		set("ScoreBoard.Overlay.LogoBackground", "true");
+		set("Clock." + Clock.ID_PERIOD + ".Direction", "true");
+		set("Clock." + Clock.ID_JAM + ".Direction", "true");
+		set("Clock." + Clock.ID_LINEUP + ".Direction", "false");
+		set("Clock." + Clock.ID_TIMEOUT + ".Direction", "false");
+		set("Clock." + Clock.ID_INTERMISSION + ".Direction", "true");
 	}
 
 	public void addRuleMapping(String rule, String[] mapTo) {
@@ -81,6 +118,9 @@ public class DefaultSettingsModel extends DefaultScoreBoardEventProvider impleme
 	}
 	public long getLong(String k) {
 		return Long.parseLong(get(k));
+	}
+	public int getInt(String k) {
+		return Integer.parseInt(get(k));
 	}
 	public void set(String k, String v) {
 		synchronized (settingsLock) {

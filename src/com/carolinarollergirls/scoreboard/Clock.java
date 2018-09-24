@@ -69,4 +69,6 @@ public interface Clock extends ScoreBoardEventProvider
 	public static final String EVENT_MAXIMUM_TIME = "MaximumTime";
 	public static final String EVENT_DIRECTION = "Direction";
 	public static final String EVENT_RUNNING = "Running";
+	
+	public static final String SETTING_CLOCK_SYNC = "ScoreBoard.Clock.Sync";
 }

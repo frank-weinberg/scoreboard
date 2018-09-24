@@ -50,10 +50,10 @@ function loadDefinitions() {
 			var newSection = function(def) {
 				var name = def.group;
 				var section = $("<div>")
-					.addClass("section folded")
+					.addClass("section")
 					.attr("group", def.group)
 				if (def.subgroup != null) {
-					name = name + " - " + def.subgroup;
+					name = def.subgroup;
 					section.attr("subgroup", def.subgroup);
 				}
 

@@ -19,6 +19,10 @@ public class ScoreBoardClock extends TimerTask {
         updateTime();
         return currentTime;
     }
+    public synchronized long getCurrentWalltime() {
+	updateTime();
+	return currentTime + offset;
+    }
     public synchronized void rewindTo(long time) {
         lastRewind = currentTime - time;
         // changing offset instead of currentTime has two reasons:

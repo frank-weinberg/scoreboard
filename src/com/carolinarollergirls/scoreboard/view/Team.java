@@ -11,8 +11,9 @@ package com.carolinarollergirls.scoreboard.view;
 import java.util.List;
 
 import com.carolinarollergirls.scoreboard.event.ScoreBoardEventProvider;
+import com.carolinarollergirls.scoreboard.view.Timeout.TimeoutOwner;
 
-public interface Team extends ScoreBoardEventProvider {
+public interface Team extends ScoreBoardEventProvider, TimeoutOwner {
     public ScoreBoard getScoreBoard();
 
     public String getId();
@@ -27,31 +28,33 @@ public interface Team extends ScoreBoardEventProvider {
 
     public String getLogo();
 
+    public TeamJam getPreviousTeamJam();
+    public TeamJam getCurrentTeamJam();
+    public TeamJam getNextTeamJam();
+    
     public int getScore();
-    public int getLastScore();
+    public int getJamScore();
 
-    public int getTimeouts();
-    public int getOfficialReviews();
+    public List<Timeout> getTimeouts();
+    public int getTimeoutsRemaining();
+    public int getOfficialReviewsRemaining();
 
     public boolean inTimeout();
     public boolean inOfficialReview();
     public boolean retainedOfficialReview();
-
+    
     public List<Skater> getSkaters();
-    public Skater getSkater(String id) throws SkaterNotFoundException;
+    public Skater getCurrentSkater(FloorPosition fp);
 
-    public List<Position> getPositions();
-    public Position getPosition(String id) throws PositionNotFoundException;
-
-    public String getLeadJammer();
+    public boolean displayLead();
+    public boolean isLost();
+    public boolean isLead();
+    public boolean isCalloff();
+    public boolean isInjury();
     public boolean isStarPass();
 
     public static final String ID_1 = "1";
     public static final String ID_2 = "2";
-
-    public static final String LEAD_LEAD = "Lead";
-    public static final String LEAD_NO_LEAD = "NoLead";
-    public static final String LEAD_LOST_LEAD = "LostLead";
 
     public static final String SETTING_NUMBER_TIMEOUTS = "Rule.Team.Timeouts";
     public static final String SETTING_TIMEOUTS_PER_PERIOD = "Rule.Team.TimeoutsPer";
@@ -61,7 +64,7 @@ public interface Team extends ScoreBoardEventProvider {
     public static final String EVENT_NAME = "Name";
     public static final String EVENT_LOGO = "Logo";
     public static final String EVENT_SCORE = "Score";
-    public static final String EVENT_LAST_SCORE = "LastScore";
+    public static final String EVENT_JAM_SCORE = "JamScore";
     public static final String EVENT_TIMEOUTS = "Timeouts";
     public static final String EVENT_OFFICIAL_REVIEWS = "OfficialReviews";
     public static final String EVENT_IN_TIMEOUT = "InTimeout";
@@ -69,12 +72,18 @@ public interface Team extends ScoreBoardEventProvider {
     public static final String EVENT_RETAINED_OFFICIAL_REVIEW = "RetainedOfficialReview";
     public static final String EVENT_ADD_SKATER = "AddSkater";
     public static final String EVENT_REMOVE_SKATER = "RemoveSkater";
-    public static final String EVENT_LEAD_JAMMER = "LeadJammer";
+    public static final String EVENT_DISPLAY_LEAD = "DisplayLead";
+    public static final String EVENT_LOST = "Lost";
+    public static final String EVENT_LEAD = "Lead";
+    public static final String EVENT_CALLOFF = "Calloff";
+    public static final String EVENT_INJURY = "Injury";
     public static final String EVENT_STAR_PASS = "StarPass";
     public static final String EVENT_ADD_ALTERNATE_NAME = "AddAlternateName";
     public static final String EVENT_REMOVE_ALTERNATE_NAME = "RemoveAlternateName";
     public static final String EVENT_ADD_COLOR = "AddColor";
     public static final String EVENT_REMOVE_COLOR = "RemoveColor";
+    public static final String EVENT_ADD_TRIP = "AddTrip";
+    public static final String EVENT_REMOVE_TRIP = "RemoveTrip";
 
     public static interface AlternateName extends ScoreBoardEventProvider {
         public String getId();

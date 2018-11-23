@@ -14,23 +14,45 @@ import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.output.XMLOutputter;
 
+import com.carolinarollergirls.scoreboard.defaults.DefaultBoxTripModel;
+import com.carolinarollergirls.scoreboard.defaults.DefaultFieldingModel;
+import com.carolinarollergirls.scoreboard.defaults.DefaultJamModel;
+import com.carolinarollergirls.scoreboard.defaults.DefaultPenaltyModel;
+import com.carolinarollergirls.scoreboard.defaults.DefaultPeriodModel;
+import com.carolinarollergirls.scoreboard.defaults.DefaultScoringTripModel;
+import com.carolinarollergirls.scoreboard.defaults.DefaultSkaterModel;
+import com.carolinarollergirls.scoreboard.defaults.DefaultTimeoutModel;
+import com.carolinarollergirls.scoreboard.model.BoxTripModel;
 import com.carolinarollergirls.scoreboard.model.ClockModel;
+import com.carolinarollergirls.scoreboard.model.FieldingModel;
 import com.carolinarollergirls.scoreboard.model.FrontendSettingsModel;
-import com.carolinarollergirls.scoreboard.model.PositionModel;
+import com.carolinarollergirls.scoreboard.model.JamModel;
+import com.carolinarollergirls.scoreboard.model.PenaltyModel;
+import com.carolinarollergirls.scoreboard.model.PeriodModel;
 import com.carolinarollergirls.scoreboard.model.ScoreBoardModel;
+import com.carolinarollergirls.scoreboard.model.ScoringTripModel;
 import com.carolinarollergirls.scoreboard.model.SettingsModel;
 import com.carolinarollergirls.scoreboard.model.SkaterModel;
-import com.carolinarollergirls.scoreboard.model.StatsModel;
+import com.carolinarollergirls.scoreboard.model.TeamJamModel;
 import com.carolinarollergirls.scoreboard.model.TeamModel;
+import com.carolinarollergirls.scoreboard.model.TimeoutModel;
+import com.carolinarollergirls.scoreboard.view.BoxTrip;
 import com.carolinarollergirls.scoreboard.view.Clock;
+import com.carolinarollergirls.scoreboard.view.Fielding;
+import com.carolinarollergirls.scoreboard.view.FloorPosition;
 import com.carolinarollergirls.scoreboard.view.FrontendSettings;
+import com.carolinarollergirls.scoreboard.view.Jam;
+import com.carolinarollergirls.scoreboard.view.Penalty;
+import com.carolinarollergirls.scoreboard.view.Period;
 import com.carolinarollergirls.scoreboard.view.Position;
 import com.carolinarollergirls.scoreboard.view.ScoreBoard;
+import com.carolinarollergirls.scoreboard.view.ScoringTrip;
 import com.carolinarollergirls.scoreboard.view.Settings;
 import com.carolinarollergirls.scoreboard.view.Skater;
-import com.carolinarollergirls.scoreboard.view.SkaterNotFoundException;
-import com.carolinarollergirls.scoreboard.view.Stats;
 import com.carolinarollergirls.scoreboard.view.Team;
+import com.carolinarollergirls.scoreboard.view.TeamJam;
+import com.carolinarollergirls.scoreboard.view.Timeout;
+import com.carolinarollergirls.scoreboard.view.Timeout.TimeoutOwner;
 
 public class ScoreBoardXmlConverter {
     /*****************************/
@@ -43,7 +65,15 @@ public class ScoreBoardXmlConverter {
     public Document toDocument(ScoreBoard scoreBoard) {
         Element sb = new Element("ScoreBoard");
         Document d = new Document(new Element("document").addContent(sb));
-
+     
+        toElement(d.getRootElement(), scoreBoard);
+        
+        return d;
+    }
+    
+    public Element toElement(Element p, ScoreBoard scoreBoard) {
+	Element sb = editor.setElement(p, "ScoreBoard");
+	
         editor.setElement(sb, "Reset", null, "");
         editor.setElement(sb, "StartJam", null, "");
         editor.setElement(sb, "StopJam", null, "");
@@ -53,29 +83,32 @@ public class ScoreBoardXmlConverter {
         editor.setElement(sb, "StartOvertime", null, "");
         editor.setElement(sb, "OfficialTimeout", null, "");
 
-        editor.setElement(sb, ScoreBoard.EVENT_TIMEOUT_OWNER, null, scoreBoard.getTimeoutOwner());
+        editor.setElement(sb, ScoreBoard.EVENT_TIMEOUT_OWNER, null, scoreBoard.getTimeoutOwner().getId());
         editor.setElement(sb, ScoreBoard.EVENT_OFFICIAL_REVIEW, null, String.valueOf(scoreBoard.isOfficialReview()));
-        editor.setElement(sb, ScoreBoard.EVENT_IN_OVERTIME, null, String.valueOf(scoreBoard.isInOvertime()));
         editor.setElement(sb, ScoreBoard.EVENT_IN_PERIOD, null, String.valueOf(scoreBoard.isInPeriod()));
+        editor.setElement(sb, ScoreBoard.EVENT_IN_OVERTIME, null, String.valueOf(scoreBoard.isInOvertime()));
         editor.setElement(sb, ScoreBoard.EVENT_OFFICIAL_SCORE, null, String.valueOf(scoreBoard.isOfficialScore()));
         editor.setElement(sb, ScoreBoard.EVENT_RULESET, null, String.valueOf(scoreBoard.getRuleset()));
+        editor.setElement(sb, ScoreBoard.EVENT_GAME_DURATION, null, String.valueOf(scoreBoard.getGameDuration()));
+        editor.setElement(sb, ScoreBoard.EVENT_GAME_WALLTIME_START, null, String.valueOf(scoreBoard.getGameWalltimeStart()));
+        editor.setElement(sb, ScoreBoard.EVENT_GAME_WALLTIME_END, null, String.valueOf(scoreBoard.getGameWalltimeEnd()));
 
         toElement(sb, scoreBoard.getSettings());
         toElement(sb, scoreBoard.getFrontendSettings());
 
-        Iterator<Clock> clocks = scoreBoard.getClocks().iterator();
-        while (clocks.hasNext()) {
-            toElement(sb, clocks.next());
+        for (Clock clock : scoreBoard.getClocks()) {
+            toElement(sb, clock);
         }
 
-        Iterator<Team> teams = scoreBoard.getTeams().iterator();
-        while (teams.hasNext()) {
-            toElement(sb, teams.next());
+        for (Team team : scoreBoard.getTeams()) {
+            toElement(sb, team);
         }
 
-        toElement(sb, scoreBoard.getStats());
+        for (Period period : scoreBoard.getPeriods()) {
+            toElement(sb, period);
+        }
 
-        return d;
+        return sb;
     }
 
     public Element toElement(Element p, Settings s) {
@@ -115,8 +148,6 @@ public class ScoreBoardXmlConverter {
 
         editor.setElement(e, Clock.EVENT_NAME, null, c.getName());
         editor.setElement(e, Clock.EVENT_NUMBER, null, String.valueOf(c.getNumber()));
-        editor.setElement(e, Clock.EVENT_MINIMUM_NUMBER, null, String.valueOf(c.getMinimumNumber()));
-        editor.setElement(e, Clock.EVENT_MAXIMUM_NUMBER, null, String.valueOf(c.getMaximumNumber()));
         editor.setElement(e, Clock.EVENT_TIME, null, String.valueOf(c.getTime()));
         editor.setElement(e, Clock.EVENT_INVERTED_TIME, null, String.valueOf(c.getInvertedTime()));
         editor.setElement(e, Clock.EVENT_MINIMUM_TIME, null, String.valueOf(c.getMinimumTime()));
@@ -135,36 +166,53 @@ public class ScoreBoardXmlConverter {
         editor.setElement(e, Team.EVENT_NAME, null, t.getName());
         editor.setElement(e, Team.EVENT_LOGO, null, t.getLogo());
         editor.setElement(e, Team.EVENT_SCORE, null, String.valueOf(t.getScore()));
-        editor.setElement(e, Team.EVENT_LAST_SCORE, null, String.valueOf(t.getLastScore()));
-        editor.setElement(e, Team.EVENT_TIMEOUTS, null, String.valueOf(t.getTimeouts()));
-        editor.setElement(e, Team.EVENT_OFFICIAL_REVIEWS, null, String.valueOf(t.getOfficialReviews()));
+        editor.setElement(e, Team.EVENT_JAM_SCORE, null, String.valueOf(t.getJamScore()));
+        editor.setElement(e, Team.EVENT_TIMEOUTS, null, String.valueOf(t.getTimeoutsRemaining()));
+        editor.setElement(e, Team.EVENT_OFFICIAL_REVIEWS, null, String.valueOf(t.getOfficialReviewsRemaining()));
         editor.setElement(e, Team.EVENT_IN_TIMEOUT, null, String.valueOf(t.inTimeout()));
         editor.setElement(e, Team.EVENT_IN_OFFICIAL_REVIEW, null, String.valueOf(t.inOfficialReview()));
         editor.setElement(e, Team.EVENT_RETAINED_OFFICIAL_REVIEW, null, String.valueOf(t.retainedOfficialReview()));
-        editor.setElement(e, Team.EVENT_LEAD_JAMMER, null, t.getLeadJammer());
+        editor.setElement(e, Team.EVENT_DISPLAY_LEAD, null, String.valueOf(t.displayLead()));
+        editor.setElement(e, Team.EVENT_LOST, null, String.valueOf(t.isLost()));
+        editor.setElement(e, Team.EVENT_LEAD, null, String.valueOf(t.isLead()));
+        editor.setElement(e, Team.EVENT_CALLOFF, null, String.valueOf(t.isCalloff()));
+        editor.setElement(e, Team.EVENT_INJURY, null, String.valueOf(t.isInjury()));
         editor.setElement(e, Team.EVENT_STAR_PASS, null, String.valueOf(t.isStarPass()));
 
-        Iterator<Team.AlternateName> alternateNames = t.getAlternateNames().iterator();
-        while (alternateNames.hasNext()) {
-            toElement(e, alternateNames.next());
+	for (FloorPosition fp: FloorPosition.values()) {
+	    setPosition(e, t, fp);
+	}
+        
+        for (Team.AlternateName alternateName : t.getAlternateNames()) {
+            toElement(e, alternateName);
         }
 
-        Iterator<Team.Color> colors = t.getColors().iterator();
-        while (colors.hasNext()) {
-            toElement(e, colors.next());
+        for (Team.Color color : t.getColors()) {
+            toElement(e, color);
         }
 
-        Iterator<Position> positions = t.getPositions().iterator();
-        while (positions.hasNext()) {
-            toElement(e, positions.next());
-        }
-
-        Iterator<Skater> skaters = t.getSkaters().iterator();
-        while (skaters.hasNext()) {
-            toElement(e, skaters.next());
+        for (Skater skater : t.getSkaters()) {
+            toElement(e, skater);
         }
 
         return e;
+    }
+    public void setPosition(Element teamElement, Team team, FloorPosition fp) {
+	Skater s = team.getCurrentSkater(fp);
+	Element e = editor.setElement(teamElement, "Position", fp.toString());
+	if (s != null) {
+	    editor.setElement(e, "Id", null, s.getId());
+	    editor.setElement(e, Skater.EVENT_NAME, null, s.getName());
+	    editor.setElement(e, Skater.EVENT_NUMBER, null, s.getNumber());
+	    editor.setElement(e, Skater.EVENT_PENALTY_BOX, null, String.valueOf(s.isInBox()));
+	    editor.setElement(e, Skater.EVENT_FLAGS, null, s.getFlags());
+	} else {
+	    editor.setElement(e, "Id", null, "");
+	    editor.setElement(e, Skater.EVENT_NAME, null, "");
+	    editor.setElement(e, Skater.EVENT_NUMBER, null, "");
+	    editor.setElement(e, Skater.EVENT_PENALTY_BOX, null, String.valueOf(false));
+	    editor.setElement(e, Skater.EVENT_FLAGS, null, "");
+	}
     }
 
     public Element toElement(Element team, Team.AlternateName n) {
@@ -183,113 +231,198 @@ public class ScoreBoardXmlConverter {
         return e;
     }
 
-    public Element toElement(Element team, Position p) {
-        Element e = editor.setElement(team, "Position", p.getId());
-
-        editor.setElement(e, "Clear", null, "");
-
-        Skater s = p.getSkater();
-        editor.setElement(e, "Id", null, (s==null?"":s.getId()));
-        editor.setElement(e, Skater.EVENT_NAME, null, (s==null?"":s.getName()));
-        editor.setElement(e, Skater.EVENT_NUMBER, null, (s==null?"":s.getNumber()));
-        editor.setElement(e, Skater.EVENT_PENALTY_BOX, null, String.valueOf(s==null?false:s.isPenaltyBox()));
-        editor.setElement(e, Skater.EVENT_FLAGS, null, (s==null?"":s.getFlags()));
-
-        return e;
-    }
-
     public Element toElement(Element t, Skater s) {
         Element e = editor.setElement(t, "Skater", s.getId());
         editor.setElement(e, Skater.EVENT_NAME, null, s.getName());
         editor.setElement(e, Skater.EVENT_NUMBER, null, s.getNumber());
-        editor.setElement(e, Skater.EVENT_POSITION, null, s.getPosition());
-        editor.setElement(e, Skater.EVENT_PENALTY_BOX, null, String.valueOf(s.isPenaltyBox()));
+        editor.setElement(e, Skater.EVENT_POSITION, null, s.getPosition().toString());
+        editor.setElement(e, Skater.EVENT_PENALTY_BOX, null, String.valueOf(s.isInBox()));
         editor.setElement(e, Skater.EVENT_FLAGS, null, s.getFlags());
 
-        for (Skater.Penalty p: s.getPenalties()) {
+        for (Penalty p: s.getPenalties()) {
             toElement(e, p);
         }
 
         if (s.getFOEXPPenalty() != null) {
-            Element fe = editor.setElement(e, Skater.EVENT_PENALTY_FOEXP, s.getFOEXPPenalty().getId());
-            toElement(fe, s.getFOEXPPenalty());
+            editor.setElement(e, Skater.EVENT_PENALTY_FOEXP, null, s.getFOEXPPenalty().getId());
         }
 
         return e;
     }
 
-    public Element toElement(Element s, Skater.Penalty p) {
+    public Element toElement(Element s, Penalty p) {
         Element e = editor.setElement(s, "Penalty", p.getId());
-        editor.setElement(e, Skater.EVENT_PENALTY_PERIOD, null, String.valueOf(p.getPeriod()));
-        editor.setElement(e, Skater.EVENT_PENALTY_JAM, null, String.valueOf(p.getJam()));
-        editor.setElement(e, Skater.EVENT_PENALTY_CODE, null, p.getCode());
-        return e;
-    }
-
-    public Element toElement(Element sb, Stats s) {
-        Element e = editor.setElement(sb, "Stats");
-        for (Stats.PeriodStats p: s.getPeriodStats()) {
-            toElement(e, p);
+        editor.setElement(e, Penalty.EVENT_CODE, null, p.getCode());
+        editor.setElement(e, Penalty.EVENT_JAM, null, String.valueOf(p.getJam().getNumber()));
+        editor.setElement(e, Penalty.EVENT_PERIOD, null, String.valueOf(p.getJam().getPeriod().getNumber()));
+        editor.setElement(e, Penalty.EVENT_NUMBER, null, String.valueOf(p.getNumber()));
+        editor.setElement(e, Penalty.EVENT_EXPULSION, null, String.valueOf(p.isExpulsion()));
+        editor.setElement(e, Penalty.EVENT_SERVED, null, String.valueOf(p.isServed()));
+        for (BoxTrip b: p.getBoxTrips()) {
+            editor.setElement(e, "BoxTrip", b.getId());
         }
         return e;
     }
 
-    public Element toElement(Element s, Stats.PeriodStats p) {
-        Element e = editor.setElement(s, "Period", String.valueOf(p.getPeriodNumber()));
-        for (Stats.JamStats j: p.getJamStats()) {
+    public Element toElement(Element sb, Period p) {
+        Element e = editor.setElement(sb, "Period", p.getId());
+        editor.setElement(e, Period.EVENT_NUMBER, null, String.valueOf(p.getNumber()));
+        editor.setElement(e, Period.EVENT_CURRENT, null, String.valueOf(p.isCurrent()));
+        editor.setElement(e, Period.EVENT_RUNNING, null, String.valueOf(p.isRunning()));
+        editor.setElement(e, Period.EVENT_DURATION, null, String.valueOf(p.getDuration()));
+        editor.setElement(e, Period.EVENT_WALLTIME_START, null, String.valueOf(p.getWalltimeStart()));
+        editor.setElement(e, Period.EVENT_WALLTIME_END, null, String.valueOf(p.getWalltimeEnd()));
+        if (p.getPrevious() != null) {
+            editor.setElement(e, Period.EVENT_PREVIOUS, null, p.getPrevious().getId());
+        }
+        if (p.getNext() != null) {
+            editor.setElement(e, Period.EVENT_NEXT, null, p.getNext().getId());
+        }
+        for (Jam j: p.getJams()) {
             toElement(e, j);
         }
-        return e;
-    }
-
-    public Element toElement(Element p, Stats.JamStats j) {
-        Element e = editor.setElement(p, "Jam", String.valueOf(j.getJamNumber()));
-        editor.setElement(e, "JamClockElapsedEnd", null, String.valueOf(j.getJamClockElapsedEnd()));
-        editor.setElement(e, "PeriodClockElapsedStart", null, String.valueOf(j.getPeriodClockElapsedStart()));
-        editor.setElement(e, "PeriodClockElapsedEnd", null, String.valueOf(j.getPeriodClockElapsedEnd()));
-        editor.setElement(e, "PeriodClockWalltimeStart", null, String.valueOf(j.getPeriodClockWalltimeStart()));
-        editor.setElement(e, "PeriodClockWalltimeEnd", null, String.valueOf(j.getPeriodClockWalltimeEnd()));
-        for (Stats.TeamStats t: j.getTeamStats()) {
+        for (Timeout t: p.getTimeouts()) {
             toElement(e, t);
         }
         return e;
     }
 
-    public Element toElement(Element j, Stats.TeamStats t) {
-        Element e = editor.setElement(j, "Team", t.getTeamId());
-        editor.setElement(e, "JamScore", null, String.valueOf(t.getJamScore()));
-        editor.setElement(e, "TotalScore", null, String.valueOf(t.getTotalScore()));
-        editor.setElement(e, "LeadJammer", null, t.getLeadJammer());
-        editor.setElement(e, "StarPass", null, String.valueOf(t.getStarPass()));
-        editor.setElement(e, "Timeouts", null, String.valueOf(t.getTimeouts()));
-        editor.setElement(e, "OfficialReviews", null, String.valueOf(t.getOfficialReviews()));
-        for (Stats.SkaterStats s: t.getSkaterStats()) {
-            toElement(e, s);
+    public Element toElement(Element p, Timeout t) {
+        Element e = editor.setElement(p, "Timeout", t.getId());
+        editor.setElement(e, Timeout.EVENT_OWNER, null, t.getOwner().toString());
+        editor.setElement(e, Timeout.EVENT_REVIEW, null, String.valueOf(t.isOfficialReview()));
+        editor.setElement(e, Timeout.EVENT_CURRENT, null, String.valueOf(t.isCurrent()));
+        editor.setElement(e, Timeout.EVENT_RUNNING, null, String.valueOf(t.isRunning()));
+        editor.setElement(e, Timeout.EVENT_DURATION, null, String.valueOf(t.getDuration()));
+        editor.setElement(e, Timeout.EVENT_PERIOD_CLOCK_START, null, String.valueOf(t.getPeriodClockElapsedStart()));
+        editor.setElement(e, Timeout.EVENT_PERIOD_CLOCK_END, null, String.valueOf(t.getPeriodClockElapsedEnd()));
+        editor.setElement(e, Timeout.EVENT_WALLTIME_START, null, String.valueOf(t.getWalltimeStart()));
+        editor.setElement(e, Timeout.EVENT_WALLTIME_END, null, String.valueOf(t.getWalltimeEnd()));
+        editor.setElement(e, Timeout.EVENT_PRECEDING_JAM, null, t.getPrecedingJam().getId());
+        return e;
+    }
+
+    public Element toElement(Element p, Jam j) {
+        Element e = editor.setElement(p, "Jam", j.getId());
+        editor.setElement(e, Jam.EVENT_NUMBER, null, String.valueOf(j.getNumber()));
+        editor.setElement(e, Jam.EVENT_INJURY, null, String.valueOf(j.getInjury()));
+        editor.setElement(e, Jam.EVENT_CURRENT, null, String.valueOf(j.isCurrent()));
+        editor.setElement(e, Jam.EVENT_RUNNING, null, String.valueOf(j.isRunning()));
+        editor.setElement(e, Jam.EVENT_DURATION, null, String.valueOf(j.getDuration()));
+        editor.setElement(e, Jam.EVENT_PERIOD_CLOCK_START, null, String.valueOf(j.getPeriodClockElapsedStart()));
+        editor.setElement(e, Jam.EVENT_PERIOD_CLOCK_END, null, String.valueOf(j.getPeriodClockElapsedEnd()));
+        editor.setElement(e, Jam.EVENT_WALLTIME_START, null, String.valueOf(j.getWalltimeStart()));
+        editor.setElement(e, Jam.EVENT_WALLTIME_END, null, String.valueOf(j.getWalltimeEnd()));
+        if (j.getPrevious() != null) {
+            editor.setElement(e, Jam.EVENT_PREVIOUS, null, j.getPrevious().getId());
+        }
+        if (j.getNext() != null) {
+            editor.setElement(e, Jam.EVENT_NEXT, null, j.getNext().getId());
+        }
+        for (TeamJam tj: j.getTeamJams()) {
+            toElement(e, tj);
+        }
+        for (Penalty pe: j.getPenalties()) {
+            editor.setElement(e, "Penalty", pe.getId());
+        }
+        for (Timeout t: j.getTimeoutsAfter()) {
+            editor.setElement(e, "Timeout", t.getId());
         }
         return e;
     }
 
-    public Element toElement(Element t, Stats.SkaterStats s) {
-        Element e = editor.setElement(t, "Skater", s.getSkaterId());
-        editor.setElement(e, "Position", null, s.getPosition());
-        editor.setElement(e, "PenaltyBox", null, String.valueOf(s.getPenaltyBox()));
+    public Element toElement(Element j, TeamJam tj) {
+        Element e = editor.setElement(j, "TeamJam", tj.getId());
+        editor.setElement(e, TeamJam.EVENT_OS_OFFSET, null, String.valueOf(tj.getOsOffset()));
+        editor.setElement(e, TeamJam.EVENT_OS_OFFSET_REASON, null, String.valueOf(tj.getOsOffsetReason()));
+        editor.setElement(e, TeamJam.EVENT_JAM_SCORE, null, String.valueOf(tj.getJamScore()));
+        editor.setElement(e, TeamJam.EVENT_SCORE, null, String.valueOf(tj.getTotalScore()));
+        editor.setElement(e, TeamJam.EVENT_LOST, null, String.valueOf(tj.isLost()));
+        editor.setElement(e, TeamJam.EVENT_LEAD, null, String.valueOf(tj.isLead()));
+        editor.setElement(e, TeamJam.EVENT_CALLOFF, null, String.valueOf(tj.isCalloff()));
+        if (tj.getStarPassTrip() != null) {
+            editor.setElement(e, TeamJam.EVENT_STAR_PASS_TRIP, null, tj.getStarPassTrip().toString());
+        }
+        editor.setElement(e, TeamJam.EVENT_NO_PIVOT, null, String.valueOf(tj.hasNoPivot()));
+        for (ScoringTrip st : tj.getScoringTrips()) {
+            toElement(e, st);
+        }
+        for (FloorPosition fp: FloorPosition.values()) {
+            Fielding f = tj.getFielding(fp);
+            if (f != null) {
+        	toElement(e, f);
+            }
+        }
+        return e;
+    }
+
+    public Element toElement(Element t, ScoringTrip st) {
+        Element e = editor.setElement(t, "ScoringTrip", st.getId());
+        editor.setElement(e, ScoringTrip.EVENT_POINTS, null, String.valueOf(st.getPoints()));
+        editor.setElement(e, ScoringTrip.EVENT_NUMBER, null, String.valueOf(st.getNumber()));
+        editor.setElement(e, ScoringTrip.EVENT_AFTER_SP, null, String.valueOf(st.isAfterSP()));
+        editor.setElement(e, ScoringTrip.EVENT_DURATION, null, String.valueOf(st.getDuration()));
+        editor.setElement(e, ScoringTrip.EVENT_JAM_CLOCK_START, null, String.valueOf(st.getJamClockElapsedStart()));
+        editor.setElement(e, ScoringTrip.EVENT_JAM_CLOCK_END, null, String.valueOf(st.getJamClockElapsedEnd()));
+        editor.setElement(e, ScoringTrip.EVENT_WALLTIME_START, null, String.valueOf(st.getWalltimeStart()));
+        editor.setElement(e, ScoringTrip.EVENT_WALLTIME_END, null, String.valueOf(st.getWalltimeEnd()));
+        if (st.getPrevious() != null) {
+            editor.setElement(e, ScoringTrip.EVENT_PREVIOUS, null, st.getPrevious().getId());
+        }
+        if (st.getNext() != null) {
+            editor.setElement(e, ScoringTrip.EVENT_NEXT, null, st.getNext().getId());
+        }
+        return e;
+    }
+
+    public Element toElement(Element t, Fielding f) {
+        Element e = editor.setElement(t, "Fielding", f.getId());
+        editor.setElement(e, Fielding.EVENT_SKATER, f.getSkater().getId());
+        editor.setElement(e, Fielding.EVENT_POSITION, null, f.getFloorPosition().toString());
+        editor.setElement(e, Fielding.EVENT_3_JAMS, null, String.valueOf(f.gotSat3Jams()));
+        for (BoxTrip bt : f.getBoxTrips()) {
+            if (f == bt.getFieldings().first()) {
+        	toElement(e, bt);
+            } else {
+        	editor.setElement(e, "BoxTrip", bt.getId());
+            }
+        }
+        return e;
+    }
+
+    public Element toElement(Element fe, BoxTrip bt) {
+        Element e = editor.setElement(fe, "BoxTrip", bt.getId());
+        editor.setElement(e, BoxTrip.EVENT_CURRENT, null, String.valueOf(bt.isCurrent()));
+        editor.setElement(e, BoxTrip.EVENT_START_BETWEEN, null, String.valueOf(bt.startedBetweenJams()));
+        editor.setElement(e, BoxTrip.EVENT_END_BETWEEN, null, String.valueOf(bt.endedBetweenJams()));
+        editor.setElement(e, BoxTrip.EVENT_START_AFTER_SP, null, String.valueOf(bt.startedAfterStarPass()));
+        editor.setElement(e, BoxTrip.EVENT_END_AFTER_SP, null, String.valueOf(bt.endedAfterStarPass()));
+        for (Penalty p : bt.getPenalties()) {
+            editor.setElement(e, "Penalty", p.getId());
+        }
+        for (Fielding f : bt.getFieldings()) {
+            editor.setElement(e, "Fielding", f.getId());
+            if (bt.getAnnotation(f) != null) {
+        	editor.setElement(e, BoxTrip.EVENT_ANNOTATION, f.getId(), bt.getAnnotation(f));
+            }
+        }
         return e;
     }
 
     /*****************************/
     /* XML to ScoreBoard methods */
 
-    public void processDocument(ScoreBoardModel scoreBoardModel, Document document) {
+    public void processDocument(ScoreBoardModel scoreBoardModel, Document document, boolean ignoreCompat) {
         Iterator<?> children = document.getRootElement().getChildren().iterator();
         while (children.hasNext()) {
             Element element = (Element)children.next();
             if (element.getName().equals("ScoreBoard")) {
-                processScoreBoard(scoreBoardModel, element);
+                processScoreBoard(scoreBoardModel, element, ignoreCompat);
             }
         }
     }
 
-    public void processScoreBoard(ScoreBoardModel scoreBoardModel, Element scoreBoard) {
+    public void processScoreBoard(ScoreBoardModel scoreBoardModel, Element scoreBoard, boolean ignoreCompat) {
         Iterator<?> children = scoreBoard.getChildren().iterator();
         while (children.hasNext()) {
             Element element = (Element)children.next();
@@ -301,27 +434,29 @@ public class ScoreBoardXmlConverter {
                 if (name.equals("Clock")) {
                     processClock(scoreBoardModel, element);
                 } else if (name.equals("Team")) {
-                    processTeam(scoreBoardModel, element);
+                    processTeam(scoreBoardModel, element, ignoreCompat);
                 } else if (name.equals("Settings")) {
                     processSettings(scoreBoardModel, element);
                 } else if (name.equals("FrontendSettings")) {
                     processFrontendSettings(scoreBoardModel, element);
-                } else if (name.equals("Stats")) {
-                    processStats(scoreBoardModel.getStatsModel(), element);
+                } else if (name.equals("Period")) {
+                    processPeriod(scoreBoardModel, element);
                 } else if (null == value) {
                     continue;
-                } else if (name.equals(ScoreBoard.EVENT_TIMEOUT_OWNER)) {
-                    scoreBoardModel.setTimeoutOwner(value);
-                } else if (name.equals(ScoreBoard.EVENT_OFFICIAL_REVIEW)) {
-                    scoreBoardModel.setOfficialReview(bVal);
                 } else if (name.equals(ScoreBoard.EVENT_IN_OVERTIME)) {
                     scoreBoardModel.setInOvertime(bVal);
-                } else if (name.equals(ScoreBoard.EVENT_IN_PERIOD)) {
-                    scoreBoardModel.setInPeriod(bVal);
-                } else if (name.equals(ScoreBoard.EVENT_OFFICIAL_SCORE)) {
-                    scoreBoardModel.setOfficialScore(bVal);
                 } else if (name.equals(ScoreBoard.EVENT_RULESET)) {
                     scoreBoardModel.setRuleset(value);
+                } else if (ignoreCompat) {
+                    continue;
+                } else if (name.equals(ScoreBoard.EVENT_TIMEOUT_OWNER) && scoreBoardModel.isInTimeout()) {
+                    scoreBoardModel.getCurrentTimeoutModel().setOwner(scoreBoardModel.getTimeoutOwner(value));
+                } else if (name.equals(ScoreBoard.EVENT_OFFICIAL_REVIEW) && scoreBoardModel.isInTimeout()) {
+                    scoreBoardModel.getCurrentTimeoutModel().setOfficialReview(bVal);
+                } else if (name.equals(ScoreBoard.EVENT_IN_PERIOD)) {
+                    scoreBoardModel.getCurrentPeriodModel().setRunning(bVal);
+                } else if (name.equals(ScoreBoard.EVENT_OFFICIAL_SCORE)) {
+                    scoreBoardModel.setOfficialScore(bVal);
                 } else if (bVal) {
                     if (name.equals("Reset")) {
                         scoreBoardModel.reset();
@@ -338,7 +473,7 @@ public class ScoreBoardXmlConverter {
                     } else if (name.equals("StartOvertime")) {
                         scoreBoardModel.startOvertime();
                     } else if (name.equals("OfficialTimeout")) {
-                        scoreBoardModel.setTimeoutType("O", false);
+                        scoreBoardModel.setTimeoutType(scoreBoardModel.getTimeoutOwner(TimeoutOwner.OTO), false);
                     }
                 }
             } catch ( Exception e ) {
@@ -407,14 +542,6 @@ public class ScoreBoardXmlConverter {
                     clockModel.resetTime();
                 } else if (name.equals(Clock.EVENT_NAME)) {
                     clockModel.setName(value);
-                } else if (name.equals(Clock.EVENT_NUMBER) && isChange) {
-                    clockModel.changeNumber(Integer.parseInt(value));
-                } else if (name.equals(Clock.EVENT_NUMBER) && !isChange) {
-                    clockModel.setNumber(Integer.parseInt(value));
-                } else if (name.equals(Clock.EVENT_MINIMUM_NUMBER)) {
-                    clockModel.setMinimumNumber(Integer.parseInt(value));
-                } else if (name.equals(Clock.EVENT_MAXIMUM_NUMBER)) {
-                    clockModel.setMaximumNumber(Integer.parseInt(value));
                 } else if (name.equals(Clock.EVENT_TIME) && isChange) {
                     clockModel.changeTime(Long.parseLong(value));
                 } else if (name.equals(Clock.EVENT_TIME) && isReset) {
@@ -444,7 +571,7 @@ public class ScoreBoardXmlConverter {
         if (requestStop) { clockModel.stop(); }
     }
 
-    public void processTeam(ScoreBoardModel scoreBoardModel, Element team) {
+    public void processTeam(ScoreBoardModel scoreBoardModel, Element team, boolean ignoreCompat) {
         String id = team.getAttributeValue("Id");
         TeamModel teamModel = scoreBoardModel.getTeamModel(id);
 
@@ -471,36 +598,33 @@ public class ScoreBoardXmlConverter {
                     teamModel.timeout();
                 } else if (name.equals("OfficialReview") && Boolean.parseBoolean(value)) {
                     teamModel.officialReview();
+                } else if (name.equals(Team.EVENT_ADD_TRIP) && Boolean.parseBoolean(value)) {
+                    teamModel.addTrip();
+                } else if (name.equals(Team.EVENT_REMOVE_TRIP) && Boolean.parseBoolean(value)) {
+                    teamModel.removeTrip();
                 } else if (name.equals(Team.EVENT_NAME)) {
                     teamModel.setName(value);
                 } else if (name.equals(Team.EVENT_LOGO)) {
                     teamModel.setLogo(value);
+                } else if (ignoreCompat) {
+                    continue;
                 } else if (name.equals(Team.EVENT_SCORE) && isChange) {
                     teamModel.changeScore(Integer.parseInt(value));
-                } else if (name.equals(Team.EVENT_LAST_SCORE) && isChange) {
-                    teamModel.changeLastScore(Integer.parseInt(value));
                 } else if (name.equals(Team.EVENT_SCORE) && !isChange) {
                     teamModel.setScore(Integer.parseInt(value));
-                } else if (name.equals(Team.EVENT_LAST_SCORE) && !isChange) {
-                    teamModel.setLastScore(Integer.parseInt(value));
-                } else if (name.equals(Team.EVENT_TIMEOUTS) && isChange) {
-                    teamModel.changeTimeouts(Integer.parseInt(value));
-                } else if (name.equals(Team.EVENT_TIMEOUTS) && !isChange) {
-                    teamModel.setTimeouts(Integer.parseInt(value));
-                } else if (name.equals(Team.EVENT_OFFICIAL_REVIEWS) && isChange) {
-                    teamModel.changeOfficialReviews(Integer.parseInt(value));
-                } else if (name.equals(Team.EVENT_OFFICIAL_REVIEWS) && !isChange) {
-                    teamModel.setOfficialReviews(Integer.parseInt(value));
-                } else if (name.equals(Team.EVENT_IN_TIMEOUT)) {
-                    teamModel.setInTimeout(Boolean.parseBoolean(value));
-                } else if (name.equals(Team.EVENT_IN_OFFICIAL_REVIEW)) {
-                    teamModel.setInOfficialReview(Boolean.parseBoolean(value));
                 } else if (name.equals(Team.EVENT_RETAINED_OFFICIAL_REVIEW)) {
                     teamModel.setRetainedOfficialReview(Boolean.parseBoolean(value));
-                } else if (name.equals(Team.EVENT_LEAD_JAMMER)) {
-                    teamModel.setLeadJammer(value);
+                } else if (name.equals(Team.EVENT_LOST)) {
+                    teamModel.getCurrentTeamJamModel().setLost(Boolean.parseBoolean(value));
+                } else if (name.equals(Team.EVENT_LEAD)) {
+                    teamModel.getCurrentTeamJamModel().setLead(Boolean.parseBoolean(value));
+                } else if (name.equals(Team.EVENT_CALLOFF)) {
+                    teamModel.getCurrentTeamJamModel().setCalloff(Boolean.parseBoolean(value));
+                } else if (name.equals(Team.EVENT_INJURY)) {
+                    teamModel.getCurrentTeamJamModel().setInjury(Boolean.parseBoolean(value));
                 } else if (name.equals(Team.EVENT_STAR_PASS)) {
-                    teamModel.setStarPass(Boolean.parseBoolean(value));
+                    teamModel.getCurrentTeamJamModel().setStarPassTrip(
+                	    Boolean.parseBoolean(value) ? teamModel.getCurrentTeamJamModel().getCurrentScoringTripModel() : null);
                 }
             } catch ( Exception e ) {
             }
@@ -570,8 +694,10 @@ public class ScoreBoardXmlConverter {
     }
 
     public void processPosition(TeamModel teamModel, Element position) {
-        String id = position.getAttributeValue("Id");
-        PositionModel positionModel = teamModel.getPositionModel(id);
+        FloorPosition pos = FloorPosition.fromString(position.getAttributeValue("Id"));
+        TeamJamModel tjm = teamModel.getCurrentTeamJamModel();
+        ScoreBoardModel sbm = teamModel.getScoreBoardModel();
+        if (!sbm.isInJam()) { tjm = tjm.getNext(); }
 
         Iterator<?> children = position.getChildren().iterator();
         while (children.hasNext()) {
@@ -582,12 +708,17 @@ public class ScoreBoardXmlConverter {
 
                 if (null == value) {
                     continue;
-                } else if (name.equals("Clear") && Boolean.parseBoolean(value)) {
-                    positionModel.clear();
-                } else if (name.equals("Id")) {
-                    positionModel.setSkaterModel(value);
-                } else if (name.equals(Position.EVENT_PENALTY_BOX)) {
-                    positionModel.setPenaltyBox(Boolean.parseBoolean(value));
+                } else if (name.equals("Id") && value != "") {
+                    tjm.fieldSkater(sbm.getSkaterModel(value), pos.toPosition());
+                } else if (tjm.getFieldingModel(pos) == null) {
+                    continue;
+                } else if ((name.equals("Clear") && Boolean.parseBoolean(value)) ||
+                	(name.equals("Id") && value == "")) {
+                    tjm.fieldSkater(tjm.getFieldingModel(pos).getSkaterModel(), Position.BENCH);
+                } else if (name.equals("PenaltyBox") && Boolean.parseBoolean(value)) {
+                    tjm.getFieldingModel(pos).getSkaterModel().startBoxTrip(!sbm.isInJam(), tjm.isStarPass());
+                } else if (name.equals("PenaltyBox") && !Boolean.parseBoolean(value)) {
+                    tjm.getFieldingModel(pos).getSkaterModel().finishBoxTrip(!sbm.isInJam(), tjm.isStarPass());
                 }
             } catch ( Exception e ) {
             }
@@ -596,182 +727,174 @@ public class ScoreBoardXmlConverter {
 
     public void processSkater(TeamModel teamModel, Element skater) {
         String id = skater.getAttributeValue("Id");
-        SkaterModel skaterModel;
+        ScoreBoardModel scoreBoardModel = teamModel.getScoreBoardModel();
+        SkaterModel skaterModel = scoreBoardModel.getSkaterModel(id);
 
-        if (editor.hasRemovePI(skater)) {
-            teamModel.removeSkaterModel(id);
+        if (editor.hasRemovePI(skater) && skaterModel != null) {
+            scoreBoardModel.deleteSkaterModel(skaterModel);
             return;
         }
 
-        try {
-            skaterModel = teamModel.getSkaterModel(id);
-        } catch ( SkaterNotFoundException snfE ) {
+        if (skaterModel == null) {
             Element nameE = skater.getChild(Skater.EVENT_NAME);
             String name = (nameE == null ? "" : editor.getText(nameE));
             Element numberE = skater.getChild(Skater.EVENT_NUMBER);
             String number = (numberE == null ? "" : editor.getText(numberE));
             Element flagsE = skater.getChild(Skater.EVENT_FLAGS);
             String flags = (flagsE == null ? "" : editor.getText(flagsE));
-            teamModel.addSkaterModel(id, name, number, flags);
-            skaterModel = teamModel.getSkaterModel(id);
-        }
+            skaterModel = new DefaultSkaterModel(teamModel, id, name, number, flags);
+            teamModel.addSkaterModel(skaterModel);
+        } else {
+            Iterator<?> children = skater.getChildren().iterator();
+            while (children.hasNext()) {
+        	Element element = (Element)children.next();
+        	try {
+        	    String name = element.getName();
+        	    String value = editor.getText(element);
 
-        Iterator<?> children = skater.getChildren().iterator();
-        while (children.hasNext()) {
-            Element element = (Element)children.next();
-            try {
-                String name = element.getName();
-                String value = editor.getText(element);
-
-                if (name.equals(Skater.EVENT_PENALTY)) {
-                    processPenalty(skaterModel, element, false);
-                } else if (name.equals(Skater.EVENT_PENALTY_FOEXP)) {
-                    processPenalty(skaterModel, element.getChild(Skater.EVENT_PENALTY), true);
-                } else if (null == value) {
-                    continue;
-                } else if (name.equals(Skater.EVENT_NAME)) {
-                    skaterModel.setName(value);
-                } else if (name.equals(Skater.EVENT_NUMBER)) {
-                    skaterModel.setNumber(value);
-                } else if (name.equals(Skater.EVENT_POSITION)) {
-                    skaterModel.setPosition(value);
-                } else if (name.equals(Skater.EVENT_PENALTY_BOX)) {
-                    skaterModel.setPenaltyBox(Boolean.parseBoolean(value));
-                } else if (name.equals(Skater.EVENT_FLAGS)) {
-                    skaterModel.setFlags(value);
-                }
-            } catch ( Exception e ) {
+        	    if (name.equals("Penalty")) {
+        		processPenalty(skaterModel, element);
+        	    } else if (null == value) {
+        		continue;
+        	    } else if (name.equals(Skater.EVENT_NAME)) {
+        		skaterModel.setName(value);
+        	    } else if (name.equals(Skater.EVENT_NUMBER)) {
+        		skaterModel.setNumber(value);
+        	    } else if (name.equals(Skater.EVENT_POSITION)) {
+        		teamModel.getCurrentTeamJamModel().fieldSkater(skaterModel, FloorPosition.fromString(value).toPosition());
+        	    } else if (name.equals(Skater.EVENT_PENALTY_BOX) && Boolean.parseBoolean(value) && !skaterModel.isInBox()) {
+        		skaterModel.startBoxTrip(!scoreBoardModel.isInJam(), teamModel.isStarPass());
+        	    } else if (name.equals(Skater.EVENT_PENALTY_BOX) && !Boolean.parseBoolean(value) && skaterModel.isInBox()) {
+        		skaterModel.finishBoxTrip(!scoreBoardModel.isInJam(), teamModel.isStarPass());
+        	    } else if (name.equals(Skater.EVENT_FLAGS)) {
+        		skaterModel.setFlags(value);
+        	    }
+        	} catch ( Exception e ) {
+        	}
             }
         }
     }
 
-    public void processPenalty(SkaterModel skaterModel, Element penalty, boolean foulout_exp) {
+    public void processPenalty(SkaterModel skaterModel, Element penalty) {
         String id = penalty.getAttributeValue("Id");
-        int period = 0;
-        int jam = 0;
-        String code = "";
+        ScoreBoardModel scoreBoardModel = skaterModel.getTeamModel().getScoreBoardModel();
+        PenaltyModel penaltyModel = scoreBoardModel.getPenaltyModel(id);
 
+        if (editor.hasRemovePI(penalty) && penaltyModel != null) {
+            scoreBoardModel.deletePenaltyModel(penaltyModel);
+            return;
+        }
+
+        if (penaltyModel == null) {
+            Element jamE = penalty.getChild(Penalty.EVENT_JAM);
+            JamModel jam = (jamE == null ? null : scoreBoardModel.getJamModel(editor.getText(jamE)));
+            Element codeE = penalty.getChild(Penalty.EVENT_CODE);
+            String code = (codeE == null ? "" : editor.getText(codeE));
+            Element expulsionE = penalty.getChild(Penalty.EVENT_EXPULSION);
+            boolean expulsion = (expulsionE == null ? false : Boolean.parseBoolean(editor.getText(expulsionE)));
+            penaltyModel = new DefaultPenaltyModel(id, skaterModel, jam, code, expulsion);
+            skaterModel.addPenaltyModel(penaltyModel);
+        }
+        
         Iterator<?> children = penalty.getChildren().iterator();
         while (children.hasNext()) {
             Element element = (Element)children.next();
             try {
-                String name = element.getName();
-                String value = editor.getText(element);
+        	String name = element.getName();
+        	String value = editor.getText(element);
 
-                if (null == value) {
-                    continue;
-                } else if (name.equals(Skater.EVENT_PENALTY_PERIOD)) {
-                    period = Integer.parseInt(value);
-                } else if (name.equals(Skater.EVENT_PENALTY_JAM)) {
-                    jam = Integer.parseInt(value);
-                } else if (name.equals(Skater.EVENT_PENALTY_CODE)) {
-                    code = value;
-                }
-            } catch ( Exception e ) {
-            }
-        }
-        skaterModel.AddPenaltyModel(id, foulout_exp, period, jam, code);
-    }
-
-    public void processStats(StatsModel statsModel, Element stats) {
-        Iterator<?> children = stats.getChildren().iterator();
-        while (children.hasNext()) {
-            Element element = (Element)children.next();
-            try {
-                String id = element.getAttributeValue("Id");
-                String name = element.getName();
-
-                if (name.equals("Period")) {
-                    int p = Integer.parseInt(id);
-                    statsModel.ensureAtLeastNPeriods(p);
-                    processPeriodStats(statsModel.getPeriodStatsModel(p), element);
-                }
+        	if (name.equals("BoxTrip")) {
+        	    penaltyModel.addBoxTrip(scoreBoardModel.getBoxTripModel(editor.getId(element)));
+        	} else if (null == value) {
+        	    continue;
+        	} else if (name.equals(Penalty.EVENT_CODE)) {
+        	    penaltyModel.setCode(value);
+        	} else if (name.equals(Penalty.EVENT_JAM)) {
+        	    penaltyModel.setJamModel(scoreBoardModel.getJamModel(value));
+        	} else if (name.equals(Penalty.EVENT_EXPULSION)) {
+        	    penaltyModel.setExpulsion(Boolean.parseBoolean(value));
+        	} else if (name.equals(Penalty.EVENT_SERVED)) {
+        	    penaltyModel.forceServed(Boolean.parseBoolean(value));
+        	}
             } catch ( Exception e ) {
             }
         }
     }
 
-    public void processPeriodStats(StatsModel.PeriodStatsModel periodStatsModel, Element periodStats) {
-        Iterator<?> children = periodStats.getChildren().iterator();
+    public void processPeriod(ScoreBoardModel scoreBoardModel, Element period) {
+        String id = period.getAttributeValue("Id");
+	PeriodModel periodModel = scoreBoardModel.getPeriodModel(id);
+
+	if (editor.hasRemovePI(period) && periodModel != null) {
+            scoreBoardModel.removePeriod(periodModel);
+            return;
+        }
+
+        if (periodModel == null) {
+            Element prevE = period.getChild(Period.EVENT_PREVIOUS);
+            PeriodModel prev = (prevE == null ? null : scoreBoardModel.getPeriodModel(editor.getText(prevE)));
+            Element nextE = period.getChild(Period.EVENT_NEXT);
+            PeriodModel next = (nextE == null ? null : scoreBoardModel.getPeriodModel(editor.getText(nextE)));
+            Element walltimeE = period.getChild(Period.EVENT_WALLTIME_END);
+            long walltimeEnd = (walltimeE == null ? 0 : Long.parseLong(editor.getText(walltimeE)));
+            periodModel = new DefaultPeriodModel(id, prev, next, walltimeEnd);
+            scoreBoardModel.addPeriod(periodModel);
+        }
+	
+        Iterator<?> children = period.getChildren().iterator();
         while (children.hasNext()) {
             Element element = (Element)children.next();
             try {
-                String id = element.getAttributeValue("Id");
                 String name = element.getName();
+        	String value = editor.getText(element);
 
+                if (name.equals("Timeout")) {
+                    processTimeout(periodModel, element);
+                }
                 if (name.equals("Jam")) {
-                    int j = Integer.parseInt(id);
-                    periodStatsModel.ensureAtLeastNJams(j);
-                    processJamStats(periodStatsModel.getJamStatsModel(j), element);
-                }
-            } catch ( Exception e ) {
-            }
-        }
-    }
-
-    public void processJamStats(StatsModel.JamStatsModel jamStatsModel, Element jamStats) {
-        Iterator<?> children = jamStats.getChildren().iterator();
-        while (children.hasNext()) {
-            Element element = (Element)children.next();
-            try {
-                String id = element.getAttributeValue("Id");
-                String name = element.getName();
-                String value = editor.getText(element);
-
-                if (name.equals("Team")) {
-                    processTeamStats(jamStatsModel.getTeamStatsModel(id), element);
+                    processJam(periodModel, element);
                 } else if (null == value) {
                     continue;
-                } else if (name.equals("JamClockElapsedEnd")) {
-                    jamStatsModel.setJamClockElapsedEnd(Long.parseLong(value));
-                } else if (name.equals("PeriodClockElapsedStart")) {
-                    jamStatsModel.setPeriodClockElapsedStart(Long.parseLong(value));
-                } else if (name.equals("PeriodClockElapsedEnd")) {
-                    jamStatsModel.setPeriodClockElapsedEnd(Long.parseLong(value));
-                } else if (name.equals("PeriodClockWalltimeStart")) {
-                    jamStatsModel.setPeriodClockWalltimeStart(Long.parseLong(value));
-                } else if (name.equals("PeriodClockWalltimeEnd")) {
-                    jamStatsModel.setPeriodClockWalltimeEnd(Long.parseLong(value));
+                } else if (name.equals(Period.EVENT_CURRENT)) {
+                    periodModel.setCurrent(Boolean.parseBoolean(value));
+                } else if (name.equals(Period.EVENT_RUNNING)) {
+                    periodModel.setRunning(Boolean.parseBoolean(value));
                 }
             } catch ( Exception e ) {
             }
         }
     }
 
-    public void processTeamStats(StatsModel.TeamStatsModel teamStatsModel, Element teamStats) {
-        Iterator<?> children = teamStats.getChildren().iterator();
-        while (children.hasNext()) {
-            Element element = (Element)children.next();
-            try {
-                String id = element.getAttributeValue("Id");
-                String name = element.getName();
-                String value = editor.getText(element);
+    public void processTimeout(PeriodModel periodModel, Element timeout) {
+	String id = timeout.getAttributeValue("Id");
+        ScoreBoardModel scoreBoardModel = periodModel.getScoreBoardModel();
+        TimeoutModel timeoutModel = scoreBoardModel.getTimeoutModel(id);
 
-                if (name.equals("Skater")) {
-                    teamStatsModel.addSkaterStatsModel(id);
-                    processSkaterStats(teamStatsModel.getSkaterStatsModel(id), element);
-                } else if (null == value) {
-                    continue;
-                } else if (name.equals("JamScore")) {
-                    teamStatsModel.setJamScore(Integer.parseInt(value));
-                } else if (name.equals("TotalScore")) {
-                    teamStatsModel.setTotalScore(Integer.parseInt(value));
-                } else if (name.equals("LeadJammer")) {
-                    teamStatsModel.setLeadJammer(value);
-                } else if (name.equals("StarPass")) {
-                    teamStatsModel.setStarPass(Boolean.parseBoolean(value));
-                } else if (name.equals("Timeouts")) {
-                    teamStatsModel.setTimeouts(Integer.parseInt(value));
-                } else if (name.equals("OfficialReviews")) {
-                    teamStatsModel.setOfficialReviews(Integer.parseInt(value));
-                }
-            } catch ( Exception e ) {
-            }
+        if (editor.hasRemovePI(timeout) && timeoutModel != null) {
+            scoreBoardModel.deleteTimeoutModel(timeoutModel);
+            return;
         }
-    }
 
-    public void processSkaterStats(StatsModel.SkaterStatsModel skaterStatsModel, Element skaterStats) {
-        Iterator<?> children = skaterStats.getChildren().iterator();
+        if (timeoutModel == null) {
+            Element jamE = timeout.getChild(Timeout.EVENT_PRECEDING_JAM);
+            JamModel jam = (jamE == null ? null : scoreBoardModel.getJamModel(editor.getText(jamE)));
+            Element curE = timeout.getChild(Timeout.EVENT_CURRENT);
+            boolean cur = (curE == null ? false : Boolean.parseBoolean(editor.getText(curE)));
+            Element durE = timeout.getChild(Timeout.EVENT_DURATION);
+            long dur = (durE == null ? 0 : Long.parseLong(editor.getText(durE)));
+            Element pcStartE = timeout.getChild(Timeout.EVENT_PERIOD_CLOCK_START);
+            long pcStart = (pcStartE == null ? 0 : Long.parseLong(editor.getText(pcStartE)));
+            Element pcEndE = timeout.getChild(Timeout.EVENT_PERIOD_CLOCK_END);
+            long pcEnd = (pcEndE == null ? 0 : Long.parseLong(editor.getText(pcEndE)));
+            Element wallStartE = timeout.getChild(Timeout.EVENT_WALLTIME_START);
+            long wallStart = (wallStartE == null ? 0 : Long.parseLong(editor.getText(wallStartE)));
+            Element wallEndE = timeout.getChild(Timeout.EVENT_WALLTIME_END);
+            long wallEnd = (wallEndE == null ? 0 : Long.parseLong(editor.getText(wallEndE)));
+            timeoutModel = new DefaultTimeoutModel(id, jam, cur, dur, pcStart, pcEnd, wallStart, wallEnd);
+            periodModel.addTimeout(timeoutModel);
+        }
+        
+        Iterator<?> children = timeout.getChildren().iterator();
         while (children.hasNext()) {
             Element element = (Element)children.next();
             try {
@@ -780,11 +903,237 @@ public class ScoreBoardXmlConverter {
 
                 if (null == value) {
                     continue;
-                } else if (name.equals("PenaltyBox")) {
-                    skaterStatsModel.setPenaltyBox(Boolean.parseBoolean(value));
-                } else if (name.equals("Position")) {
-                    skaterStatsModel.setPosition(value);
+                } else if (name.equals(Timeout.EVENT_CURRENT)) {
+                    timeoutModel.setCurrent(Boolean.parseBoolean(value));
+                } else if (name.equals(Timeout.EVENT_OWNER)) {
+                    timeoutModel.setOwner(scoreBoardModel.getTimeoutOwner(value));
+                } else if (name.equals(Timeout.EVENT_REVIEW)) {
+                    timeoutModel.setOfficialReview(Boolean.parseBoolean(value));
                 }
+            } catch ( Exception e ) {
+            }
+        }
+    }
+
+    public void processJam(PeriodModel periodModel, Element jam) {
+	String id = jam.getAttributeValue("Id");
+        ScoreBoardModel scoreBoardModel = periodModel.getScoreBoardModel();
+        JamModel jamModel = scoreBoardModel.getJamModel(id);
+
+        if (editor.hasRemovePI(jam) && jamModel != null) {
+            scoreBoardModel.deleteJamModel(jamModel);
+            return;
+        }
+
+        if (jamModel == null) {
+            Element prevE = jam.getChild(Jam.EVENT_PREVIOUS);
+            JamModel prev = (prevE == null ? null : scoreBoardModel.getJamModel(editor.getText(prevE)));
+            Element nextE = jam.getChild(Jam.EVENT_NEXT);
+            JamModel next = (nextE == null ? null : scoreBoardModel.getJamModel(editor.getText(nextE)));
+            Element durE = jam.getChild(Jam.EVENT_DURATION);
+            long dur = (durE == null ? 0 : Long.parseLong(editor.getText(durE)));
+            Element pcStartE = jam.getChild(Jam.EVENT_PERIOD_CLOCK_START);
+            long pcStart = (pcStartE == null ? 0 : Long.parseLong(editor.getText(pcStartE)));
+            Element pcEndE = jam.getChild(Jam.EVENT_PERIOD_CLOCK_END);
+            long pcEnd = (pcEndE == null ? 0 : Long.parseLong(editor.getText(pcEndE)));
+            Element wallStartE = jam.getChild(Jam.EVENT_WALLTIME_START);
+            long wallStart = (wallStartE == null ? 0 : Long.parseLong(editor.getText(wallStartE)));
+            Element wallEndE = jam.getChild(Jam.EVENT_WALLTIME_END);
+            long wallEnd = (wallEndE == null ? 0 : Long.parseLong(editor.getText(wallEndE)));
+            jamModel = new DefaultJamModel(id, scoreBoardModel, periodModel, prev, next, dur, pcStart, pcEnd, wallStart, wallEnd);
+            periodModel.addJam(jamModel);
+        }
+        
+        Iterator<?> children = jam.getChildren().iterator();
+        while (children.hasNext()) {
+            Element element = (Element)children.next();
+            try {
+                String eid = element.getAttributeValue("Id");
+                String name = element.getName();
+                String value = editor.getText(element);
+
+                if (name.equals("TeamJam")) {
+                    processTeamJam(jamModel, element);
+                } else if (name.equals("Penalty")) {
+                    jamModel.addPenaltyModel(scoreBoardModel.getPenaltyModel(eid));
+                } else if (name.equals("Timeout")) {
+                    jamModel.addTimeoutAfter(scoreBoardModel.getTimeoutModel(eid));
+                } else if (null == value) {
+                    continue;
+                } else if (name.equals(Jam.EVENT_CURRENT)) {
+                    jamModel.setCurrent(Boolean.parseBoolean(value));
+                } else if (name.equals(Jam.EVENT_INJURY)) {
+                    jamModel.setInjury(Boolean.parseBoolean(value));
+                }
+            } catch ( Exception e ) {
+            }
+        }
+    }
+
+    public void processTeamJam(JamModel jamModel, Element teamJam) {
+	String id = teamJam.getAttributeValue("Id");
+        ScoreBoardModel scoreBoardModel = jamModel.getScoreBoardModel();
+        TeamJamModel teamJamModel = scoreBoardModel.getTeamJamModel(id);
+
+        if (editor.hasRemovePI(teamJam) && teamJamModel != null) {
+            scoreBoardModel.deleteTeamJamModel(teamJamModel);
+            return;
+        }
+        
+        Iterator<?> children = teamJam.getChildren().iterator();
+        while (children.hasNext()) {
+            Element element = (Element)children.next();
+            try {
+                String name = element.getName();
+                String value = editor.getText(element);
+
+                if (name.equals("ScoringTrip")) {
+                    processScoringTrip(teamJamModel, element);
+                } else if (name.equals("Fielding")) {
+                    processFielding(teamJamModel, element);
+                } else if (null == value) {
+                    continue;
+                } else if (name.equals(TeamJam.EVENT_OS_OFFSET)) {
+                    teamJamModel.setOsOffset(Integer.parseInt(value));
+                } else if (name.equals(TeamJam.EVENT_OS_OFFSET_REASON)) {
+                    teamJamModel.setOsOffsetReason(value);
+                } else if (name.equals(TeamJam.EVENT_LOST)) {
+                    teamJamModel.setLost(Boolean.parseBoolean(value));
+                } else if (name.equals(TeamJam.EVENT_LEAD)) {
+                    teamJamModel.setLead(Boolean.parseBoolean(value));
+                } else if (name.equals(TeamJam.EVENT_CALLOFF)) {
+                    teamJamModel.setCalloff(Boolean.parseBoolean(value));
+                } else if (name.equals(TeamJam.EVENT_STAR_PASS_TRIP)) {
+                    teamJamModel.setStarPassTrip(scoreBoardModel.getScoringTripModel(value));
+                } else if (name.equals(TeamJam.EVENT_NO_PIVOT)) {
+                    teamJamModel.setNoPivot(Boolean.parseBoolean(value));
+                }
+            } catch ( Exception e ) {
+            }
+        }
+    }
+
+    public void processScoringTrip(TeamJamModel teamJamModel, Element scoringTrip) {
+        String id = scoringTrip.getAttributeValue("Id");
+        ScoreBoardModel scoreBoardModel = teamJamModel.getTeamModel().getScoreBoardModel();
+        ScoringTripModel scoringTripModel = scoreBoardModel.getScoringTripModel(id);
+
+        if (editor.hasRemovePI(scoringTrip) && scoringTripModel != null) {
+            scoreBoardModel.deleteScoringTripModel(scoringTripModel);
+            return;
+        }
+
+        if (scoringTripModel == null) {
+            Element prevE = scoringTrip.getChild(ScoringTrip.EVENT_PREVIOUS);
+            ScoringTripModel prev = (prevE == null ? null : scoreBoardModel.getScoringTripModel(editor.getText(prevE)));
+            Element nextE = scoringTrip.getChild(ScoringTrip.EVENT_NEXT);
+            ScoringTripModel next = (nextE == null ? null : scoreBoardModel.getScoringTripModel(editor.getText(nextE)));
+            Element afterSPE = scoringTrip.getChild(ScoringTrip.EVENT_AFTER_SP);
+            boolean afterSP = (afterSPE == null ? false : Boolean.parseBoolean(editor.getText(afterSPE)));
+            scoringTripModel = new DefaultScoringTripModel(id, teamJamModel, prev, next, afterSP);
+            teamJamModel.addScoringTripModel(scoringTripModel);
+        }
+        
+        Iterator<?> children = scoringTrip.getChildren().iterator();
+        while (children.hasNext()) {
+            Element element = (Element)children.next();
+            try {
+        	String name = element.getName();
+        	String value = editor.getText(element);
+
+        	if (null == value) {
+        	    continue;
+                } else if (name.equals(ScoringTrip.EVENT_AFTER_SP)) {
+                    scoringTripModel.setAfterSP(Boolean.parseBoolean(value));
+        	} else if (name.equals(ScoringTrip.EVENT_POINTS)) {
+        	    scoringTripModel.setPoints(Integer.parseInt(value));
+        	}
+            } catch ( Exception e ) {
+            }
+        }
+    }
+
+    public void processFielding(TeamJamModel teamJamModel, Element fielding) {
+        String id = fielding.getAttributeValue("Id");
+        ScoreBoardModel scoreBoardModel = teamJamModel.getTeamModel().getScoreBoardModel();
+        FieldingModel fieldingModel = scoreBoardModel.getFieldingModel(id);
+
+        if (editor.hasRemovePI(fielding) && fieldingModel != null) {
+            scoreBoardModel.deleteFieldingModel(fieldingModel);
+            return;
+        }
+
+        if (fieldingModel == null) {
+            Element skaterE = fielding.getChild(Fielding.EVENT_SKATER);
+            SkaterModel skater = (skaterE == null ? null : scoreBoardModel.getSkaterModel(editor.getText(skaterE)));
+            Element posE = fielding.getChild(Penalty.EVENT_JAM);
+            FloorPosition pos = (posE == null ? null : FloorPosition.fromString(editor.getText(posE)));
+            fieldingModel = new DefaultFieldingModel(id, teamJamModel, skater, pos);
+            teamJamModel.addFieldingModel(fieldingModel);
+        }
+        
+        Iterator<?> children = fielding.getChildren().iterator();
+        while (children.hasNext()) {
+            Element element = (Element)children.next();
+            try {
+                String name = element.getName();
+                String value = editor.getText(element);
+
+                if (name.equals("BoxTrip")) {
+                    processBoxTrip(fieldingModel, element);
+                } else if (null == value) {
+                    continue;
+                } else if (name.equals(Fielding.EVENT_SKATER)) {
+                    fieldingModel.setSkaterModel(scoreBoardModel.getSkaterModel(value));
+                } else if (name.equals(Fielding.EVENT_POSITION)) {
+                    fieldingModel.setFloorPosition(FloorPosition.fromString(value));
+                } else if (name.equals(Fielding.EVENT_3_JAMS)) {
+                    fieldingModel.setSkaterModel(scoreBoardModel.getSkaterModel(value));
+                }
+            } catch ( Exception e ) {
+            }
+        }
+    }
+
+    public void processBoxTrip(FieldingModel fieldingModel, Element boxTrip) {
+        String id = boxTrip.getAttributeValue("Id");
+        ScoreBoardModel scoreBoardModel = fieldingModel.getScoreBoardModel();
+        BoxTripModel boxTripModel = scoreBoardModel.getBoxTripModel(id);
+
+        if (editor.hasRemovePI(boxTrip) && boxTripModel != null) {
+            scoreBoardModel.deleteBoxTripModel(boxTripModel);
+            return;
+        }
+
+        if (boxTripModel == null) {
+            Element betweenE = boxTrip.getChild(BoxTrip.EVENT_START_BETWEEN);
+            boolean betweenJams = (betweenE == null ? null : Boolean.parseBoolean(editor.getText(betweenE)));
+            Element afterSpE = boxTrip.getChild(BoxTrip.EVENT_START_AFTER_SP);
+            boolean afterStarPass = (afterSpE == null ? null : Boolean.parseBoolean(editor.getText(afterSpE)));
+            Element currentE = boxTrip.getChild(BoxTrip.EVENT_CURRENT);
+            boolean isCurrent = (currentE == null ? null : Boolean.parseBoolean(editor.getText(currentE)));
+            boxTripModel = new DefaultBoxTripModel(id, fieldingModel, betweenJams, afterStarPass, isCurrent);
+            fieldingModel.addBoxTripModel(boxTripModel);
+        }
+        
+        Iterator<?> children = boxTrip.getChildren().iterator();
+        while (children.hasNext()) {
+            Element element = (Element)children.next();
+            try {
+        	String name = element.getName();
+        	String value = editor.getText(element);
+
+        	if (null == value) {
+        	    continue;
+        	} else if (name.equals(BoxTrip.EVENT_START_BETWEEN)) {
+        	    boxTripModel.setStartBetweenJams(Boolean.parseBoolean(value));
+        	} else if (name.equals(BoxTrip.EVENT_END_BETWEEN)) {
+        	    boxTripModel.setEndBetweenJams(Boolean.parseBoolean(value));
+        	} else if (name.equals(BoxTrip.EVENT_START_AFTER_SP)) {
+        	    boxTripModel.setStartAfterStarPass(Boolean.parseBoolean(value));
+        	} else if (name.equals(BoxTrip.EVENT_END_AFTER_SP)) {
+        	    boxTripModel.setEndAfterStarPass(Boolean.parseBoolean(value));
+        	}
             } catch ( Exception e ) {
             }
         }

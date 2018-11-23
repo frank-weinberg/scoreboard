@@ -8,11 +8,8 @@ package com.carolinarollergirls.scoreboard.model;
  * See the file COPYING for details.
  */
 
-import java.util.Map;
 import java.util.List;
 
-import com.carolinarollergirls.scoreboard.view.PositionNotFoundException;
-import com.carolinarollergirls.scoreboard.view.SkaterNotFoundException;
 import com.carolinarollergirls.scoreboard.view.Team;
 
 public interface TeamModel extends Team {
@@ -26,9 +23,6 @@ public interface TeamModel extends Team {
 
     public void startJam();
     public void stopJam();
-    public void benchSkaters();
-    public TeamSnapshotModel snapshot();
-    public void restoreSnapshot(TeamSnapshotModel s);
 
     public List<AlternateNameModel> getAlternateNameModels();
     public AlternateNameModel getAlternateNameModel(String id);
@@ -44,41 +38,28 @@ public interface TeamModel extends Team {
 
     public void setLogo(String logo);
 
+    public TeamJamModel getCurrentTeamJamModel();
+    public TeamJamModel getPreviousTeamJamModel();
+    public TeamJamModel getNextTeamJamModel();
+    public void removeTeamJamModel(TeamJamModel t);
+    public void updateTeamJamModels();
+    
     public void timeout();
     public void officialReview();
-
+    
     public void setScore(int score);
     public void changeScore(int change);
+    public void addTrip();
+    public void removeTrip();
 
-    public void setLastScore(int score);
-    public void changeLastScore(int change);
-
-    public void setTimeouts(int timeouts);
-    public void changeTimeouts(int change);
-    public void setOfficialReviews(int reviews);
-    public void changeOfficialReviews(int reviews);
-    public void resetTimeouts(boolean gameStart);
-
-    public void setInTimeout(boolean in_timeouts);
-    public void setInOfficialReview(boolean in_official_review);
+    public List<TimeoutModel> getTimeoutModels();
+    public void addTimeoutModel(TimeoutModel timeout);
+    public void removeTimeoutModel(TimeoutModel timeout);
     public void setRetainedOfficialReview(boolean retained_official_review);
 
-    public void addSkaterModel(SkaterModel skater);
-    public SkaterModel addSkaterModel(String id);
-    public SkaterModel addSkaterModel(String id, String name, String number, String flag);
-    public void removeSkaterModel(String id) throws SkaterNotFoundException;
-
     public List<SkaterModel> getSkaterModels();
-    public SkaterModel getSkaterModel(String id) throws SkaterNotFoundException;
-
-    public List<PositionModel> getPositionModels();
-    public PositionModel getPositionModel(String id) throws PositionNotFoundException;
-
-    public void setLeadJammer(String lead);
-
-    public void setStarPass(boolean starPass);
-
-    public void penalty(String skaterId, String penaltyId, boolean fo_exp, int period, int jam, String code);
+    public void addSkaterModel(SkaterModel skater);
+    public void removeSkaterModel(SkaterModel skater);
 
     public static interface AlternateNameModel extends AlternateName {
         public void setName(String n);
@@ -90,19 +71,5 @@ public interface TeamModel extends Team {
         public void setColor(String c);
 
         public TeamModel getTeamModel();
-    }
-
-    public static interface TeamSnapshotModel {
-        public String getId();
-        public int getScore();
-        public int getLastScore();
-        public int getTimeouts();
-        public int getOfficialReviews();
-        public String getLeadJammer();
-        public boolean getStarPass();
-        public boolean inTimeout();
-        public boolean inOfficialReview();
-        public Map<String, SkaterModel.SkaterSnapshotModel> getSkaterSnapshots();
-        public SkaterModel.SkaterSnapshotModel getSkaterSnapshot(String skater);
     }
 }

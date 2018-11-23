@@ -11,6 +11,7 @@ package com.carolinarollergirls.scoreboard.model;
 import java.util.List;
 
 import com.carolinarollergirls.scoreboard.view.ScoreBoard;
+import com.carolinarollergirls.scoreboard.view.Timeout.TimeoutOwner;
 
 public interface ScoreBoardModel extends ScoreBoard {
     public ScoreBoard getScoreBoard();
@@ -18,13 +19,8 @@ public interface ScoreBoardModel extends ScoreBoard {
     /** Reset the entire ScoreBoard. */
     public void reset();
 
-    public void setTimeoutOwner(String owner);
-    public void setOfficialReview(boolean official);
-
     public void setInOvertime(boolean inOvertime);
     public void startOvertime();
-
-    public void setInPeriod(boolean inPeriod);
 
     public void setOfficialScore(boolean official);
 
@@ -32,22 +28,59 @@ public interface ScoreBoardModel extends ScoreBoard {
     public void stopJamTO();
 
     public void timeout();
-    public void setTimeoutType(String team, boolean review);
+    public void setTimeoutType(TimeoutOwner team, boolean review);
 
     public void clockUndo(boolean replace);
-
-    public void penalty(String teamId, String skaterId, String penaltyId, boolean fo_exp, int period, int jam, String code);
 
     public void setRuleset(String id);
     public SettingsModel getSettingsModel();
     public FrontendSettingsModel getFrontendSettingsModel();
-    public StatsModel getStatsModel();
 
-// FIXME - need methods to add/remove clocks and teams! */
     public List<ClockModel> getClockModels();
     public ClockModel getClockModel(String id);
 
     public List<TeamModel> getTeamModels();
     public TeamModel getTeamModel(String id);
+
+    public List<PeriodModel> getPeriodModels();
+    public PeriodModel getPeriodModel(String id);
+    public PeriodModel getCurrentPeriodModel();
+    public void addPeriod(PeriodModel period);
+    public void registerPeriod(PeriodModel period);
+    public void removePeriod(PeriodModel period);
+
+    public TimeoutModel getTimeoutModel(String id);
+    public TimeoutModel getCurrentTimeoutModel();
+    public void registerTimeoutModel(TimeoutModel timeout);
+    public void deleteTimeoutModel(TimeoutModel timeout);
+    
+    public JamModel getJamModel(String id);
+    public JamModel getCurrentJamModel();
+    public void registerJamModel(JamModel jam);
+    public void deleteJamModel(JamModel jam);
+    
+    public TeamJamModel getTeamJamModel(String id);
+    public void registerTeamJamModel(TeamJamModel teamJam);
+    public void deleteTeamJamModel(TeamJamModel teamJam);
+    
+    public ScoringTripModel getScoringTripModel(String id);
+    public void registerScoringTripModel(ScoringTripModel trip);
+    public void deleteScoringTripModel(ScoringTripModel trip);
+    
+    public FieldingModel getFieldingModel(String id);
+    public void registerFieldingModel(FieldingModel fielding);
+    public void deleteFieldingModel(FieldingModel fielding);
+    
+    public SkaterModel getSkaterModel(String id);
+    public void registerSkaterModel(SkaterModel skater);
+    public void deleteSkaterModel(SkaterModel skater);
+    
+    public PenaltyModel getPenaltyModel(String id);
+    public void registerPenaltyModel(PenaltyModel penalty);
+    public void deletePenaltyModel(PenaltyModel penalty);
+    
+    public BoxTripModel getBoxTripModel(String id);
+    public void registerBoxTripModel(BoxTripModel boxTrip);
+    public void deleteBoxTripModel(BoxTripModel boxTrip);
 }
 

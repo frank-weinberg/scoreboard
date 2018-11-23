@@ -43,7 +43,8 @@ public class JSONStateManager {
         for (WSUpdate update : updates) {
             if (update.getValue() == null) {
                 for (String stateKey: state.keySet()) {
-                    if (stateKey.equals(update.getKey()) || stateKey.startsWith(update.getKey()+".")) {
+                    if (stateKey.equals(update.getKey()) || stateKey.startsWith(update.getKey()+".")
+                	    || stateKey.startsWith(update.getKey()+"(")) {
                         toRemove.add(stateKey);
                         changed.add(stateKey);
                     }

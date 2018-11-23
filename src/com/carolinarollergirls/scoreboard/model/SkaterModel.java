@@ -8,32 +8,41 @@ package com.carolinarollergirls.scoreboard.model;
  * See the file COPYING for details.
  */
 
-import com.carolinarollergirls.scoreboard.view.PositionNotFoundException;
+import java.util.List;
+
+import com.carolinarollergirls.scoreboard.view.Position;
 import com.carolinarollergirls.scoreboard.view.Skater;
+import com.carolinarollergirls.scoreboard.view.TeamJam;
 
 public interface SkaterModel extends Skater {
+    public ScoreBoardModel getScoreBoardModel();
+
     public TeamModel getTeamModel();
     public Skater getSkater();
-
-    public void bench();
-    public SkaterSnapshotModel snapshot();
-    public void restoreSnapshot(SkaterSnapshotModel s);
+    
+    public void unlink();
 
     public void setName(String id);
     public void setNumber(String number);
-    public void setPosition(String position) throws PositionNotFoundException;
-    public void setPenaltyBox(boolean box);
+    public void setBasePosition(Position position);
     public void setFlags(String flags);
+    
+    public void bench();
+    
+    public void changeSitFor3(FieldingModel f);
 
-    // A null code removes the penalty.
-    public void AddPenaltyModel(String id, boolean foulout_explusion, int period, int jam, String code);
+    public void startBoxTrip(boolean betweenJams, boolean afterStarPass);
+    public void finishBoxTrip(boolean betweenJams, boolean afterStarPass);
 
-    public static interface PenaltyModel extends Penalty {
-    }
+    public FieldingModel getCurrentFieldingModel();
+    public FieldingModel getFieldingModel(TeamJam jam);
+    public void addFieldingModel(FieldingModel f);
+    public void removeFieldingModel(FieldingModel f);
 
-    public static interface SkaterSnapshotModel	{
-        public String getId();
-        public String getPosition();
-        public boolean isPenaltyBox();
-    }
+    public List<PenaltyModel> getPenaltyModels();
+    public List<PenaltyModel> getUnservedPenalties();
+    public PenaltyModel getFOEXPPenaltyModel();
+    public void addPenaltyModel(PenaltyModel penalty);
+    public void removePenaltyModel(PenaltyModel penalty);
+    public void updatePenalties();
 }

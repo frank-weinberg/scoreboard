@@ -31,9 +31,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.carolinarollergirls.scoreboard.ScoreBoardManager;
+import com.carolinarollergirls.scoreboard.defaults.DefaultPenaltyModel;
 import com.carolinarollergirls.scoreboard.json.JSONStateManager;
 import com.carolinarollergirls.scoreboard.json.JSONStateListener;
+import com.carolinarollergirls.scoreboard.model.JamModel;
+import com.carolinarollergirls.scoreboard.model.PenaltyModel;
 import com.carolinarollergirls.scoreboard.model.ScoreBoardModel;
+import com.carolinarollergirls.scoreboard.model.SkaterModel;
 
 public class WS extends WebSocketServlet {
 
@@ -101,17 +105,28 @@ public class WS extends WebSocketServlet {
                     }
                 } else if (action.equals("Penalty")) {
                     JSONObject data = json.getJSONObject("data");
-                    String teamId = data.optString("teamId");
-                    String skaterId = data.optString("skaterId");
                     String penaltyId = data.optString("penaltyId", null);
-                    boolean fo_exp = data.optBoolean("fo_exp", false);
-                    int period = data.optInt("period", -1);
-                    int jam = data.optInt("jam", -1);
+                    SkaterModel skater = sbm.getSkaterModel(data.optString("skaterId"));
+                    int periodNr = Integer.parseInt(data.optString("period", "0"));
+                    int jamNr = Integer.parseInt(data.optString("jam", "0"));
+                    JamModel jam = sbm.getPeriodModels().get(periodNr).getJamModels().get(jamNr);
                     String code = data.optString("code", null);
-                    if (period == -1 || jam == -1) {
-                        return;
+                    boolean exp = data.optBoolean("exp", false);
+                    if (penaltyId == null) {
+                	skater.addPenaltyModel(new DefaultPenaltyModel(skater, jam, code, exp));
+                    } else {
+                	PenaltyModel penalty = sbm.getPenaltyModel(penaltyId);
+                	if (code == null && penalty != null) {
+                	    sbm.deletePenaltyModel(penalty);
+                	} else if (code != null && penalty == null) {
+                	    skater.addPenaltyModel(new DefaultPenaltyModel(penaltyId, skater, jam, code, exp));
+                	} else if (code != null) {
+                	    penalty.setSkaterModel(skater);
+                	    penalty.setJamModel(jam);
+                	    penalty.setCode(code);
+                	    penalty.setExpulsion(exp);
+                	}
                     }
-                    sbm.penalty(teamId, skaterId, penaltyId, fo_exp, period, jam, code);
                 } else if (action.equals("Set")) {
                     String key = json.getString("key");
                     Object value = json.get("value");

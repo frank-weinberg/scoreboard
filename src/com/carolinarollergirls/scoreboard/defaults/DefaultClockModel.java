@@ -16,6 +16,8 @@ import com.carolinarollergirls.scoreboard.model.ClockModel;
 import com.carolinarollergirls.scoreboard.model.ScoreBoardModel;
 import com.carolinarollergirls.scoreboard.utils.ScoreBoardClock;
 import com.carolinarollergirls.scoreboard.view.Clock;
+import com.carolinarollergirls.scoreboard.view.Jam;
+import com.carolinarollergirls.scoreboard.view.Period;
 import com.carolinarollergirls.scoreboard.view.ScoreBoard;
 import com.carolinarollergirls.scoreboard.view.Settings;
 
@@ -23,8 +25,6 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
     public DefaultClockModel(ScoreBoardModel sbm, String i) {
         scoreBoardModel = sbm;
         id = i;
-
-        reset();
     }
 
     public String getProviderName() { return "Clock"; }
@@ -35,27 +35,19 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
     public ScoreBoardModel getScoreBoardModel() { return scoreBoardModel; }
 
     public String getId() { return id; }
+    public String toString() { return getId(); }
 
     public Clock getClock() { return this; }
 
     public void reset() {
         synchronized (coreLock) {
+            requestBatchStart();
             stop();
 
             // Get default values from current settings or use hardcoded values
             Settings settings = getScoreBoardModel().getSettings();
             setName(id);
             setCountDirectionDown(settings.getBoolean("Rule." + id + ".Direction"));
-            if (id.equals(ID_JAM) || id.equals(ID_INTERMISSION)) {
-                setMinimumNumber(0);
-            } else {
-                setMinimumNumber(DEFAULT_MINIMUM_NUMBER);
-            }
-            if (id.equals(ID_PERIOD) || id.equals(ID_INTERMISSION)) {
-                setMaximumNumber(settings.getInt("Clock." + id + ".MaximumNumber"));
-            } else {
-                setMaximumNumber(DEFAULT_MAXIMUM_NUMBER);
-            }
             setMinimumTime(DEFAULT_MINIMUM_TIME);
             if (id.equals(ID_PERIOD) || id.equals(ID_JAM)) {
                 setMaximumTime(settings.getLong("Clock." + id + ".MaximumTime"));
@@ -63,10 +55,9 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
                 setMaximumTime(DEFAULT_MAXIMUM_TIME);
             }
 
-            // We hardcode the assumption that numbers count up.
-            setNumber(getMinimumNumber());
-
             resetTime();
+            scoreBoardChange(new ScoreBoardEvent(this, Clock.EVENT_NUMBER, getNumber(), 0));
+            requestBatchEnd();
         }
     }
 
@@ -78,7 +69,6 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
     public void restoreSnapshot(ClockSnapshotModel s) {
         synchronized (coreLock) {
             if (s.getId() != getId()) { return; }
-            setNumber(s.getNumber());
             setTime(s.getTime());
             if (s.isRunning()) {
                 start();
@@ -97,69 +87,21 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
         }
     }
 
-    public int getNumber() { return number; }
-    public void setNumber(int n) {
-        synchronized (coreLock) {
-            Integer last = new Integer(number);
-            number = checkNewNumber(n);
-            scoreBoardChange(new ScoreBoardEvent(this, EVENT_NUMBER, new Integer(number), last));
-        }
-    }
-    public void changeNumber(int change) {
-        synchronized (coreLock) {
-            Integer last = new Integer(number);
-            number = checkNewNumber(number + change);
-            scoreBoardChange(new ScoreBoardEvent(this, EVENT_NUMBER, new Integer(number), last));
-        }
-    }
-    protected int checkNewNumber(int n) {
-        if (n < minimumNumber) {
-            return minimumNumber;
-        } else if (n > maximumNumber) {
-            return maximumNumber;
-        } else {
-            return n;
-        }
-    }
-
-    public int getMinimumNumber() { return minimumNumber; }
-    public void setMinimumNumber(int n) {
-        synchronized (coreLock) {
-            Integer last = new Integer(minimumNumber);
-            minimumNumber = n;
-            if (maximumNumber < minimumNumber) {
-                setMaximumNumber(minimumNumber);
-            }
-            if (getNumber() != checkNewNumber(getNumber())) {
-                setNumber(getNumber());
-            }
-            scoreBoardChange(new ScoreBoardEvent(this, EVENT_MINIMUM_NUMBER, new Integer(minimumNumber), last));
-        }
-    }
-    public void changeMinimumNumber(int change) {
-        synchronized (coreLock) {
-            setMinimumNumber(minimumNumber + change);
-        }
-    }
-
-    public int getMaximumNumber() { return maximumNumber; }
-    public void setMaximumNumber(int n) {
-        synchronized (coreLock) {
-            Integer last = new Integer(maximumNumber);
-            if (n < minimumNumber) {
-                n = minimumNumber;
-            }
-            maximumNumber = n;
-            if (getNumber() != checkNewNumber(getNumber())) {
-                setNumber(getNumber());
-            }
-            scoreBoardChange(new ScoreBoardEvent(this, EVENT_MAXIMUM_NUMBER, new Integer(maximumNumber), last));
-        }
-    }
-    public void changeMaximumNumber(int change) {
-        synchronized (coreLock) {
-            setMaximumNumber(maximumNumber + change);
-        }
+    public int getNumber() { 
+	if (id == ID_TIMEOUT) {
+	    return scoreBoardModel.getNumberTimeouts();
+	}
+	Period p = scoreBoardModel.getCurrentPeriod();
+	if (p != null) {
+	    Jam j = scoreBoardModel.getCurrentJam();
+	    if (id == ID_PERIOD || id == ID_INTERMISSION) {
+		return p.getNumber();
+	    } else if (id == ID_JAM && j != null && (j.getPeriod() == p || 
+		    !scoreBoardModel.getSettings().getBoolean(ScoreBoard.SETTING_JAM_NUMBER_PER_PERIOD))) {
+		return j.getNumber();
+	    }
+	}
+	return 0;
     }
 
     public long getTime() { return time; }
@@ -339,7 +281,6 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
     public void startNext() {
         synchronized (coreLock) {
             requestBatchStart();
-            changeNumber(1);
             resetTime();
             start();
             requestBatchEnd();
@@ -364,9 +305,6 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
 
     protected String id;
     protected String name;
-    protected int number;
-    protected int minimumNumber;
-    protected int maximumNumber;
     protected long time;
     protected long minimumTime;
     protected long maximumTime;
@@ -388,18 +326,15 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
     public static class DefaultClockSnapshotModel implements ClockSnapshotModel {
         private DefaultClockSnapshotModel(ClockModel clock) {
             id = clock.getId();
-            number = clock.getNumber();
             time = clock.getTime();
             isRunning = clock.isRunning();
         }
 
         public String getId() { return id; }
-        public int getNumber() { return number; }
         public long getTime() { return time; }
         public boolean isRunning() { return isRunning; }
 
         protected String id;
-        protected int number;
         protected long time;
         protected boolean isRunning;
     }

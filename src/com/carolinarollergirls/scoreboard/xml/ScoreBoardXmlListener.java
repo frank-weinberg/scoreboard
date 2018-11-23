@@ -17,13 +17,20 @@ import com.carolinarollergirls.scoreboard.event.ScoreBoardEvent;
 import com.carolinarollergirls.scoreboard.event.ScoreBoardEventProvider;
 import com.carolinarollergirls.scoreboard.event.ScoreBoardListener;
 import com.carolinarollergirls.scoreboard.model.SettingsModel;
+import com.carolinarollergirls.scoreboard.view.BoxTrip;
 import com.carolinarollergirls.scoreboard.view.Clock;
+import com.carolinarollergirls.scoreboard.view.Fielding;
+import com.carolinarollergirls.scoreboard.view.FloorPosition;
 import com.carolinarollergirls.scoreboard.view.FrontendSettings;
-import com.carolinarollergirls.scoreboard.view.Position;
+import com.carolinarollergirls.scoreboard.view.Jam;
+import com.carolinarollergirls.scoreboard.view.Penalty;
+import com.carolinarollergirls.scoreboard.view.Period;
 import com.carolinarollergirls.scoreboard.view.ScoreBoard;
+import com.carolinarollergirls.scoreboard.view.ScoringTrip;
 import com.carolinarollergirls.scoreboard.view.Skater;
-import com.carolinarollergirls.scoreboard.view.Stats;
 import com.carolinarollergirls.scoreboard.view.Team;
+import com.carolinarollergirls.scoreboard.view.TeamJam;
+import com.carolinarollergirls.scoreboard.view.Timeout;
 
 /**
  * Converts a ScoreBoardEvent into a representative XML Document or XML String.
@@ -126,136 +133,132 @@ public class ScoreBoardXmlListener implements ScoreBoardListener {
                 } else {
                     editor.setRemovePI(converter.toElement(getScoreBoardElement(), (Team)event.getValue()));
                 }
+            } else if (prop.equals(ScoreBoard.EVENT_ADD_PERIOD)) {
+                converter.toElement(getScoreBoardElement(), (Period)event.getValue());
+            } else if (prop.equals(ScoreBoard.EVENT_REMOVE_PERIOD)) {
+        	editor.setRemovePI(converter.toElement(getScoreBoardElement(), (Period)event.getValue()));
             } else {
                 editor.setElement(getScoreBoardElement(), prop, null, v);
             }
         } else if (p.getProviderName().equals("Team")) {
+            Team t = (Team)p;
             if (prop.equals(Team.EVENT_ADD_ALTERNATE_NAME)) {
-                converter.toElement(getTeamElement((Team)p), (Team.AlternateName)event.getValue());
+                converter.toElement(getTeamElement(t), (Team.AlternateName)event.getValue());
             } else if (prop.equals(Team.EVENT_REMOVE_ALTERNATE_NAME)) {
                 if (isPersistent()) {
-                    editor.removeElement(getTeamElement((Team)p), "AlternateName", ((Team.AlternateName)event.getValue()).getId());
+                    editor.removeElement(getTeamElement(t), "AlternateName", ((Team.AlternateName)event.getValue()).getId());
                 } else {
-                    editor.setRemovePI(converter.toElement(getTeamElement((Team)p), (Team.AlternateName)event.getValue()));
+                    editor.setRemovePI(converter.toElement(getTeamElement(t), (Team.AlternateName)event.getValue()));
                 }
             } else if (prop.equals(Team.EVENT_ADD_COLOR)) {
-                converter.toElement(getTeamElement((Team)p), (Team.Color)event.getValue());
+                converter.toElement(getTeamElement(t), (Team.Color)event.getValue());
             } else if (prop.equals(Team.EVENT_REMOVE_COLOR)) {
                 if (isPersistent()) {
-                    editor.removeElement(getTeamElement((Team)p), "Color", ((Team.Color)event.getValue()).getId());
+                    editor.removeElement(getTeamElement(t), "Color", ((Team.Color)event.getValue()).getId());
                 } else {
-                    editor.setRemovePI(converter.toElement(getTeamElement((Team)p), (Team.Color)event.getValue()));
+                    editor.setRemovePI(converter.toElement(getTeamElement(t), (Team.Color)event.getValue()));
                 }
             } else if (prop.equals(Team.EVENT_ADD_SKATER)) {
-                converter.toElement(getTeamElement((Team)p), (Skater)event.getValue());
+                converter.toElement(getTeamElement(t), (Skater)event.getValue());
             } else if (prop.equals(Team.EVENT_REMOVE_SKATER)) {
                 if (isPersistent()) {
-                    editor.removeElement(getTeamElement((Team)p), "Skater", ((Skater)event.getValue()).getId());
+                    editor.removeElement(getTeamElement(t), "Skater", ((Skater)event.getValue()).getId());
                 } else {
-                    editor.setRemovePI(converter.toElement(getTeamElement((Team)p), (Skater)event.getValue()));
+                    editor.setRemovePI(converter.toElement(getTeamElement(t), (Skater)event.getValue()));
                 }
+            } else if (prop.equals("Jammer") || prop.equals("Pivot") || prop.equals("Blocker1") ||
+        	    prop.equals("Blocker2") || prop.equals("Blocker3")) {
+        	converter.setPosition(getTeamElement(t), t, FloorPosition.fromString(prop));
             } else {
                 editor.setElement(getTeamElement((Team)p), prop, null, v);
-            }
-        } else if (p.getProviderName().equals("Position")) {
-            Element e = getPositionElement((Position)p);
-            if (prop.equals(Position.EVENT_SKATER)) {
-                Skater s = (Skater)event.getValue();
-                editor.setElement(e, "Id", null, (s==null?"":s.getId()));
-                editor.setElement(e, "Name", null, (s==null?"":s.getName()));
-                editor.setElement(e, "Number", null, (s==null?"":s.getNumber()));
-                editor.setElement(e, "PenaltyBox", null, String.valueOf(s==null?false:s.isPenaltyBox()));
-                editor.setElement(e, "Flags", null, (s==null?"":s.getFlags()));
-            } else if (prop.equals(Position.EVENT_PENALTY_BOX)) {
-                editor.setElement(e, "PenaltyBox", null, String.valueOf(event.getValue()));
             }
         } else if (p.getProviderName().equals("AlternateName")) {
             editor.setElement(getAlternateNameElement((Team.AlternateName)p), prop, null, v);
         } else if (p.getProviderName().equals("Color")) {
             editor.setElement(getColorElement((Team.Color)p), prop, null, v);
         } else if (p.getProviderName().equals("Skater")) {
-            if (prop.equals(Skater.EVENT_PENALTY) || prop.equals(Skater.EVENT_PENALTY_FOEXP)) {
+            if (prop.equals(Skater.EVENT_PENALTY)) {
                 // Replace whole skater.
                 converter.toElement(getTeamElement(((Skater)p).getTeam()), (Skater)p);
-            } else if (prop.equals(Skater.EVENT_REMOVE_PENALTY)) {
-                Skater.Penalty prev = (Skater.Penalty)(event.getPreviousValue());
-                if (prev != null) {
-                    if (isPersistent()) {
-                        editor.removeElement(getSkaterElement((Skater)p), Skater.EVENT_PENALTY, prev.getId());
-                    } else {
-                        editor.setRemovePI(editor.addElement(getSkaterElement((Skater)p), Skater.EVENT_PENALTY, prev.getId()));
-                    }
-                }
-            } else if (prop.equals(Skater.EVENT_PENALTY_REMOVE_FOEXP)) {
-                if (isPersistent()) {
-                    editor.removeElement(getSkaterElement((Skater)p), Skater.EVENT_PENALTY_FOEXP);
-                } else {
-                    Skater.Penalty prev = (Skater.Penalty)(event.getPreviousValue());
-                    if (prev != null) {
-                        editor.setRemovePI(editor.addElement(getSkaterElement((Skater)p), Skater.EVENT_PENALTY_FOEXP, prev.getId()));
-                    }
-                }
             } else {
                 editor.setElement(getSkaterElement((Skater)p), prop, null, v);
             }
-        } else if (p.getProviderName().equals("Stats")) {
-            Stats.PeriodStats ps = (Stats.PeriodStats)(event.getValue());
-            Element e = getStatsElement();
-            if (prop.equals(Stats.EVENT_REMOVE_PERIOD)) {
-                if (isPersistent()) {
-                    editor.removeElement(e, "PeriodStats", String.valueOf(ps.getPeriodNumber()));
+        } else if (p.getProviderName().equals("Penalty")) {
+            if (prop.equals(Penalty.EVENT_ADD_BOX_TRIP)) {
+                converter.toElement(getPenaltyElement((Penalty)p), (BoxTrip)event.getValue());
+            } else if (prop.equals(Penalty.EVENT_REMOVE_BOX_TRIP)) {
+        	editor.setRemovePI(converter.toElement(getPenaltyElement((Penalty)p), (BoxTrip)event.getValue()));
+            } else {
+                editor.setElement(getPenaltyElement((Penalty)p), prop, null, v);
+            }
+        } else if (p.getProviderName().equals("Period")) {
+            if (prop.equals(Period.EVENT_ADD_TIMEOUT)) {
+                converter.toElement(getPeriodElement((Period)p), (Timeout)event.getValue());
+            } else if (prop.equals(Period.EVENT_REMOVE_TIMEOUT)) {
+        	editor.setRemovePI(converter.toElement(getPeriodElement((Period)p), (Timeout)event.getValue()));
+            } else if (prop.equals(Period.EVENT_ADD_JAM)) {
+        	converter.toElement(getPeriodElement((Period)p), (Jam)event.getValue());
+            } else if (prop.equals(Period.EVENT_REMOVE_JAM)) {
+        	editor.setRemovePI(converter.toElement(getPeriodElement((Period)p), (Jam)event.getValue()));
+            } else {
+                editor.setElement(getPeriodElement((Period)p), prop, null, v);
+            }
+        } else if (p.getProviderName().equals("Timeout")) {
+            editor.setElement(getTimeoutElement((Timeout)p), prop, null, v);
+        } else if (p.getProviderName().equals("Jam")) {
+            if (prop.equals(Jam.EVENT_ADD_TIMEOUT)) {
+        	editor.setElement(getJamElement((Jam)p), "Timeout", v);
+            } else if (prop.equals(Jam.EVENT_REMOVE_TIMEOUT)) {
+        	editor.setRemovePI(editor.getElement(getJamElement((Jam)p), "Timeout", v));
+            } else if (prop.equals(Jam.EVENT_ADD_PENALTY)) {
+        	editor.setElement(getJamElement((Jam)p), "Penalty", v);
+            } else if (prop.equals(Jam.EVENT_REMOVE_PENALTY)) {
+        	editor.setRemovePI(editor.getElement(getJamElement((Jam)p), "Penalty", v));
+            } else {
+                editor.setElement(getJamElement((Jam)p), prop, null, v);
+            }
+        } else if (p.getProviderName().equals("TeamJam")) {
+            TeamJam tj = (TeamJam)p;
+            if (prop.equals(TeamJam.EVENT_ADD_SCORING_TRIP)) {
+        	converter.toElement(getTeamJamElement(tj), (ScoringTrip)event.getValue());
+            } else if (prop.equals(TeamJam.EVENT_REMOVE_SCORING_TRIP)) {
+        	editor.setRemovePI(converter.toElement(getTeamJamElement(tj), (ScoringTrip)event.getValue()));
+            } else if (prop.equals(TeamJam.EVENT_ADD_FIELDING)) {
+        	converter.toElement(getTeamJamElement(tj), (Fielding)event.getValue());
+            } else if (prop.equals(TeamJam.EVENT_REMOVE_FIELDING)) {
+        	editor.setRemovePI(converter.toElement(getTeamJamElement(tj), (Fielding)event.getValue()));
+            } else if (prop.equals(TeamJam.EVENT_STAR_PASS_TRIP) && v == null) {
+        	editor.setRemovePI(editor.getElement(getTeamJamElement(tj), prop));
+            } else {
+                editor.setElement(getTeamJamElement(tj), prop, null, v);
+            }
+        } else if (p.getProviderName().equals("ScoringTrip")) {
+            editor.setElement(getScoringTripElement((ScoringTrip)p), prop, null, v);
+        } else if (p.getProviderName().equals("Fielding")) {
+            if (prop.equals(Fielding.EVENT_ADD_BOX_TRIP)) {
+                if ((Fielding)p == ((BoxTrip)event.getValue()).getFieldings().first()) {
+                    converter.toElement(getFieldingElement((Fielding)p), (BoxTrip)event.getValue());
                 } else {
-                    editor.setRemovePI(converter.toElement(e, ps));
+                    editor.setElement(getFieldingElement((Fielding)p), "BoxTrip", ((BoxTrip)event.getValue()).getId());
                 }
-            } else if (prop.equals(Stats.EVENT_ADD_PERIOD)) {
-                getPeriodStatsElement(ps);
+            } else if (prop.equals(Fielding.EVENT_REMOVE_BOX_TRIP)) {
+        	editor.setRemovePI(converter.toElement(getFieldingElement((Fielding)p), (BoxTrip)event.getValue()));
+            } else {
+                editor.setElement(getFieldingElement((Fielding)p), prop, null, v);
             }
-        } else if (p.getProviderName().equals("PeriodStats")) {
-            Element e = getPeriodStatsElement((Stats.PeriodStats)p);
-            Stats.JamStats js = (Stats.JamStats)(event.getValue());
-            if (prop.equals(Stats.PeriodStats.EVENT_REMOVE_JAM)) {
-                if (isPersistent()) {
-                    editor.removeElement(e, "JamStats", String.valueOf(js.getJamNumber()));
-                } else {
-                    editor.setRemovePI(converter.toElement(e, js));
-                }
-            } else if (prop.equals(Stats.PeriodStats.EVENT_ADD_JAM)) {
-                getJamStatsElement(js);
-            }
-        } else if (p.getProviderName().equals("JamStats")) {
-            Element e = getJamStatsElement((Stats.JamStats)p);
-            if (prop.equals(Stats.JamStats.EVENT_STATS)) {
-                Stats.JamStats js = (Stats.JamStats)event.getValue();
-                editor.setElement(e, "JamClockElapsedEnd", null, String.valueOf(js.getJamClockElapsedEnd()));
-                editor.setElement(e, "PeriodClockElapsedStart", null, String.valueOf(js.getPeriodClockElapsedStart()));
-                editor.setElement(e, "PeriodClockElapsedEnd", null, String.valueOf(js.getPeriodClockElapsedEnd()));
-                editor.setElement(e, "PeriodClockWalltimeStart", null, String.valueOf(js.getPeriodClockWalltimeStart()));
-                editor.setElement(e, "PeriodClockWalltimeEnd", null, String.valueOf(js.getPeriodClockWalltimeEnd()));
-            }
-        } else if (p.getProviderName().equals("TeamStats")) {
-            Element e = getTeamStatsElement((Stats.TeamStats)p);
-            if (prop.equals(Stats.TeamStats.EVENT_STATS)) {
-                Stats.TeamStats ts = (Stats.TeamStats)event.getValue();
-                editor.setElement(e, "JamScore", null, String.valueOf(ts.getJamScore()));
-                editor.setElement(e, "TotalScore", null, String.valueOf(ts.getTotalScore()));
-                editor.setElement(e, "LeadJammer", null, ts.getLeadJammer());
-                editor.setElement(e, "StarPass", null, String.valueOf(ts.getStarPass()));
-                editor.setElement(e, "Timeouts", null, String.valueOf(ts.getTimeouts()));
-                editor.setElement(e, "OfficialReviews", null, String.valueOf(ts.getOfficialReviews()));
-            } else if (prop.equals(Stats.TeamStats.EVENT_REMOVE_SKATER)) {
-                Stats.SkaterStats ss = (Stats.SkaterStats)(event.getValue());
-                if (isPersistent()) {
-                    editor.removeElement(e, "SkaterStats", ss.getSkaterId());
-                } else {
-                    editor.setRemovePI(converter.toElement(e, ss));
-                }
-            }
-        } else if (p.getProviderName().equals("SkaterStats")) {
-            Element e = getSkaterStatsElement((Stats.SkaterStats)p);
-            if (prop.equals(Stats.SkaterStats.EVENT_STATS)) {
-                Stats.SkaterStats ss = (Stats.SkaterStats)event.getValue();
-                editor.setElement(e, "Position", null, ss.getPosition());
-                editor.setElement(e, "PenaltyBox", null, String.valueOf(ss.getPenaltyBox()));
+        } else if (p.getProviderName().equals("BoxTrip")) {
+            if (prop.equals(BoxTrip.EVENT_ADD_FIELDING)) {
+        	editor.setElement(getBoxTripElement((BoxTrip)p), "Fielding", v);
+            } else if (prop.equals(BoxTrip.EVENT_REMOVE_FIELDING)) {
+        	editor.setRemovePI(editor.getElement(getBoxTripElement((BoxTrip)p), "Fielding", v));
+            } else if (prop.equals(BoxTrip.EVENT_ADD_PENALTY)) {
+            	editor.setElement(getBoxTripElement((BoxTrip)p), "Penalty", v);
+            } else if (prop.equals(BoxTrip.EVENT_REMOVE_PENALTY)) {
+            	editor.setRemovePI(editor.getElement(getBoxTripElement((BoxTrip)p), "Penalty", v));
+            } else if (prop.equals(BoxTrip.EVENT_ANNOTATION)) {
+            	editor.setElement(getBoxTripElement((BoxTrip)p), "Annotation", ((Fielding)event.getPreviousValue()).getId(), v);
+            } else {
+                editor.setElement(getBoxTripElement((BoxTrip)p), prop, null, v);
             }
         } else if (p.getProviderName().equals("Clock")) {
             Element e = editor.setElement(getClockElement((Clock)p), prop, null, v);
@@ -298,12 +301,12 @@ public class ScoreBoardXmlListener implements ScoreBoardListener {
         return editor.getElement(getScoreBoardElement(), "Team", team.getId());
     }
 
-    protected Element getPositionElement(Position position) {
-        return editor.getElement(getTeamElement(position.getTeam()), "Position", position.getId());
-    }
-
     protected Element getSkaterElement(Skater skater) {
         return editor.getElement(getTeamElement(skater.getTeam()), "Skater", skater.getId());
+    }
+
+    protected Element getPenaltyElement(Penalty penalty) {
+        return editor.getElement(getSkaterElement(penalty.getSkater()), "Penalty", penalty.getId());
     }
 
     protected Element getAlternateNameElement(Team.AlternateName alternateName) {
@@ -314,39 +317,32 @@ public class ScoreBoardXmlListener implements ScoreBoardListener {
         return editor.getElement(getTeamElement(color.getTeam()), "Color", color.getId());
     }
 
-    protected Element getStatsElement() {
-        return editor.getElement(getScoreBoardElement(), "Stats");
+    protected Element getPeriodElement(Period period) {
+        return editor.getElement(getScoreBoardElement(), "Period", period.getId());
     }
 
-    protected Element getPeriodStatsElement(Stats.PeriodStats ps) {
-        return editor.getElement(getStatsElement(), "Period", String.valueOf(ps.getPeriodNumber()));
+    protected Element getTimeoutElement(Timeout timeout) {
+        return editor.getElement(getPeriodElement(timeout.getPrecedingJam().getPeriod()), "Timeout", timeout.getId());
     }
 
-    protected Element getJamStatsElement(Stats.JamStats js) {
-        return editor.getElement(
-                   editor.getElement(
-                       getStatsElement(), "Period", String.valueOf(js.getPeriodNumber())),
-                   "Jam", String.valueOf(js.getJamNumber()));
+    protected Element getJamElement(Jam jam) {
+        return editor.getElement(getPeriodElement(jam.getPeriod()), "Jam", jam.getId());
     }
 
-    protected Element getTeamStatsElement(Stats.TeamStats ts) {
-        return editor.getElement(
-                   editor.getElement(
-                       editor.getElement(
-                           getStatsElement(), "Period", String.valueOf(ts.getPeriodNumber())),
-                       "Jam", String.valueOf(ts.getJamNumber())),
-                   "Team", ts.getTeamId());
+    protected Element getTeamJamElement(TeamJam teamJam) {
+        return editor.getElement(getJamElement(teamJam.getJam()), "TeamJam", teamJam.getId());
     }
 
-    protected Element getSkaterStatsElement(Stats.SkaterStats ss) {
-        return editor.getElement(
-                   editor.getElement(
-                       editor.getElement(
-                           editor.getElement(
-                               getStatsElement(), "Period", String.valueOf(ss.getPeriodNumber())),
-                           "Jam", String.valueOf(ss.getJamNumber())),
-                       "Team", ss.getTeamId()),
-                   "Skater", ss.getSkaterId());
+    protected Element getScoringTripElement(ScoringTrip scoringTrip) {
+        return editor.getElement(getTeamJamElement(scoringTrip.getTeamJam()), "ScoringTrip", scoringTrip.getId());
+    }
+
+    protected Element getFieldingElement(Fielding fielding) {
+        return editor.getElement(getTeamJamElement(fielding.getTeamJam()), "Fielding", fielding.getId());
+    }
+
+    protected Element getBoxTripElement(BoxTrip boxTrip) {
+        return editor.getElement(getFieldingElement(boxTrip.getFieldings().first()), "BoxTrip", boxTrip.getId());
     }
 
     protected XmlDocumentEditor editor = new XmlDocumentEditor();

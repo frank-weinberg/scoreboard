@@ -10,7 +10,7 @@
 
 
 $.fx.interval = 33;
-_include("/json", [ "Game.js", "Rulesets.js" ]);
+_include("/json", [ "Game.js", "WS.js", "Rulesets.js" ]);
 
 $sb(function() {
 	createScoreTimeTab();
@@ -650,9 +650,8 @@ function createTeamTable() {
 			.attr("id", "Team"+team+"ScoreDown").addClass("KeyControl BigButton").button()
 			.appendTo(scoreTd);
 		$("<br />").appendTo(scoreTd);
-		sbTeam.$sb("LastScore").$sbControl("<button>", { sbcontrol: { sbSetAttrs: { change: "true" } } })
-			.text("Jam Score -1").val("1")
-			.attr("id", "Team"+team+"JamScoreDown").addClass("KeyControl JamScoreButton").button()
+		sbTeam.$sb("RemoveTrip").$sbControl("<button>").text("Revert Trip").val("true")
+			.attr("id", "Team"+team+"RevertTrip").addClass("KeyControl").button()
 			.appendTo(scoreTd);
 
 		var scoreSubTr = createRowTable(3).appendTo(scoreTr.children("td:eq(1)")).find("tr");
@@ -667,9 +666,8 @@ function createTeamTable() {
 			.attr("id", "Team"+team+"ScoreUp").addClass("KeyControl BigButton").button()
 			.appendTo(scoreTd);
 		$("<br />").appendTo(scoreTd);
-		sbTeam.$sb("LastScore").$sbControl("<button>", { sbcontrol: { sbSetAttrs: { change: "true" } } })
-			.text("Jam Score +1").val("-1")
-			.attr("id", "Team"+team+"JamScoreUp").addClass("KeyControl JamScoreButton").button()
+		sbTeam.$sb("AddTrip").$sbControl("<button>").text("Next Trip").val("true")
+			.attr("id", "Team"+team+"NextTrip").addClass("KeyControl").button()
 			.appendTo(scoreTd);
 
 		for (var i = 2; i <= 5; i++) {
@@ -706,10 +704,9 @@ function createTeamTable() {
 		jamScore.stop(true).text("0").last().css({ opacity: "1", color: "#008" });
 		var lastJamScore = sbTeam.$sb("Score").$sbGet();
 		var jamScoreTimeout;
-		var jamScoreUpdate = function(event, value) {
+		sbTeam.$sb("JamScore").$sbBindAndRun("sbchange", function(event, value) {
 			var score = sbTeam.$sb("Score").$sbGet();
-			var lastscore = sbTeam.$sb("LastScore").$sbGet();
-			var s = score - lastscore;
+			var s = sbTeam.$sb("JamScore").$sbGet();
 
 			var c = (s<0 ? "#800" : s>0 ? "#080" : "#008");
 			jamScore.stop(true).text(+s).last().css({ opacity: "1", color: c });
@@ -719,9 +716,7 @@ function createTeamTable() {
 				jamScore.last()
 					.animate({ color: "#008" }, 2000)
 			}, 2000);
-		};
-		sbTeam.$sb("Score").$sbBindAndRun("sbchange", jamScoreUpdate);
-		sbTeam.$sb("LastScore").$sbBindAndRun("sbchange", jamScoreUpdate);
+		});
 
 		var timeout = sbTeam.$sb("Timeout");
 		var timeoutButton = timeout.$sbControl("<button>").text("Team TO").val("true")
@@ -774,21 +769,52 @@ function createTeamTable() {
 			otoButton.wrap("<div></div>");
 		}
 		var leadJammerTd = jammer1Tr.children("td:eq("+(first?"0":"1")+")")
-			.append("<label id='Team"+team+"Lead' class='Lead'>Lead</label><input type='radio' value='Lead'/>")
-			[first?"append":"prepend"]("<label id='Team"+team+"NoLead' class='NoLead'>No</label><input type='radio' value='NoLead'/>")
-			[first?"append":"prepend"]("<label id='Team"+team+"LostLead' class='LostLead'>Lost</label><input type='radio' value='LostLead'/>");
-		sbTeam.$sb("LeadJammer").$sbControl(leadJammerTd.children())
-			.addClass("KeyControl");
+		var lost = sbTeam.$sb("Lost");
+		var lostButton = lost.$sbControl("<button>").text("Lost").val("true")
+			.attr("id", "Team"+team+"Lost").addClass("KeyControl").button();
+		lost.$sbBindAndRun("sbchange", function(event, value) {
+			lostButton.val(!isTrue(value));
+			lostButton.toggleClass("Active", isTrue(value));
+		});
+		lostButton.appendTo(leadJammerTd);
+		var lead = sbTeam.$sb("Lead");
+		var leadButton = lead.$sbControl("<button>").text("Lead").val("true")
+			.attr("id", "Team"+team+"Lead").addClass("KeyControl").button();
+		lead.$sbBindAndRun("sbchange", function(event, value) {
+			leadButton.val(!isTrue(value));
+			leadButton.toggleClass("Active", isTrue(value));
+		});
+		leadButton.appendTo(leadJammerTd);
+		var calloff = sbTeam.$sb("Calloff");
+		var calloffButton = calloff.$sbControl("<button>").text("Call").val("true")
+			.attr("id", "Team"+team+"Call").addClass("KeyControl").button();
+		calloff.$sbBindAndRun("sbchange", function(event, value) {
+			calloffButton.val(!isTrue(value));
+			calloffButton.toggleClass("Active", isTrue(value));
+		});
+		calloffButton.appendTo(leadJammerTd);
+		var inj = sbTeam.$sb("Injury");
+		var injButton = inj.$sbControl("<button>").text("Inj").val("true")
+			.attr("id", "Team"+team+"Inj").addClass("KeyControl").button();
+		inj.$sbBindAndRun("sbchange", function(event, value) {
+			injButton.val(!isTrue(value));
+			injButton.toggleClass("Active", isTrue(value));
+		});
+		injButton.appendTo(leadJammerTd);
 		/* some strange bug, css direction is unset for leadJammerTd
 		 * so need to explicitly specify to style the buttonset as ltr
 		 */
 		leadJammerTd.css("direction", "ltr").buttonset();
 
-		var starPassTd = jammer2Tr.children("td:eq("+(first?"0":"1")+")")
-			.append("<label id='Team"+team+"StarPass' class='StarPass'>Star Pass</label><input type='radio' value='true'/>")
-			[first?"append":"prepend"]("<label id='Team"+team+"NoStarPass' class='NoStarPass'>No</label><input type='radio' value='false'/>");
-		sbTeam.$sb("StarPass").$sbControl(starPassTd.children())
-			.addClass("KeyControl");
+		var starPassTd = jammer2Tr.children("td:eq("+(first?"0":"1")+")");
+		var starPass = sbTeam.$sb("StarPass");
+		var starPassButton = starPass.$sbControl("<button>").text("Star Pass").val("true")
+			.attr("id", "Team"+team+"StarPass").addClass("KeyControl").button();
+		starPass.$sbBindAndRun("sbchange", function(event, value) {
+			starPassButton.val(!isTrue(value));
+			starPassButton.toggleClass("Active", isTrue(value));
+		});
+		starPassButton.appendTo(starPassTd);
 		/* some strange bug, css direction is unset for starPassTd
 		 * so need to explicitly specify to style the buttonset as ltr
 		 */
@@ -863,18 +889,12 @@ function createTimeTable() {
 			nameTd.toggleClass("Running", isTrue(value));
 		});
 
-		sbClock.$sb("Number").$sbControl("<button>", { sbcontrol: { sbSetAttrs: { change: "true" } } })
-			.text("-1").val("-1")
-			.attr("id", "Clock"+clock+"NumberDown").addClass("KeyControl").button()
-			.appendTo(numberTr.children("td:eq(0)").addClass("Down").css("width", "40%"));
-		sbClock.$sb("Number").$sbControl("<a/><input type='text' size='2'/>", { sbcontrol: {
-				editOnClick: true,
-				bindClickTo: numberTr.children("td:eq(1)")
-			} }).appendTo(numberTr.children("td:eq(1)").addClass("Number").css("width", "20%"));
-		sbClock.$sb("Number").$sbControl("<button>", { sbcontrol: { sbSetAttrs: { change: "true" } } })
-			.text("+1").val("1")
-			.attr("id", "Clock"+clock+"NumberUp").addClass("KeyControl").button()
-			.appendTo(numberTr.children("td:eq(2)").addClass("Up").css("width", "40%"));
+		sbClock.$sb("Number").$sbControl("<a>").appendTo(numberTr.children("td:eq(1)")
+				.addClass("Number").css("width", "20%"));
+		if (clock == "Period") {
+			var periodDialog = createPeriodDialog();
+			numberTr.children("td:eq(1)").click(function() { periodDialog.dialog("open"); });
+		}
 
 		sbClock.$sb("Start").$sbControl("<button>").text("Start").val("true")
 			.attr("id", "Clock"+clock+"Start").addClass("KeyControl").button()
@@ -898,6 +918,63 @@ function createTimeTable() {
 	});
 
 	return table;
+}
+
+function createPeriodDialog() {
+	var dialog =$("<div>");
+	var table = $("<table>").appendTo(dialog).addClass("NumberDialog");
+	var headers = $("<tr><td/><td/><td/><td/><td/></tr>").appendTo(table);
+	$("<a>").text("Nr").addClass("Title")
+		.appendTo(headers.find("td:eq(0)").addClass("Title"));
+	$("<a>").text("Jams").addClass("Title")
+		.appendTo(headers.find("td:eq(1)").addClass("Title"));
+	$("<a>").text("Duration").addClass("Title")
+		.appendTo(headers.find("td:eq(2)").addClass("Title"));
+
+	var numberPeriods = 0;
+	var periodRegex = /Period\(([^\)]+)\)/;
+	WS.Register(['ScoreBoard.Period'], function (k, v) {
+		var match = (k || "").match(periodRegex);
+		if (match == null || match.length == 0) { return; }
+		var path = k.split(".");
+		var key = path.pop();
+		if (path.pop != match[0]) { return; }
+		if (!(["Number", "CurrentJamNumber", "Duration", "Id", "Running"].includes(key))) { return; }
+
+		var nr = match[1];
+		var row = table.find(".Period[nr="+nr+"]");
+		if (row == null && v != null) {
+			row = $("<tr>").addClass("Period").attr("nr", nr)
+				.append($('<td>').addClass('Number').text(nr))
+				.append($('<td>').addClass('Jams')).text(0)
+				.append($('<td>').addClass('Duration'))
+				.append($('<td>').append($("<button>").text("Delete")
+						.button().click(function () {
+							//TODO: confirmation popup
+							WS.Command("DeletePeriod", { id: row.attr("id")}); //TODO: add commands to WS.java
+						})))
+				.append($('<td>').append($("<button>").text("Insert Before")
+						.button().click(function () {
+							WS.Command("InsertPeriod", { before: row.attr("id")}); 
+						})));
+			row.appendTo(table);
+		} else if (key == "Id" && v == null) {
+			row.remove;
+			return;
+		}
+		if (key == "Id") { row.attr("id", v); }
+		if (key == "CurrentJamNumber") { row.find("td.Jams").text(v); }
+		if (key == "Duration") { row.find("td.Duration").text(v); }
+		if (key == "Running" && isTrue(v)) { row.find("td.Duration").text("running"); }
+	});
+
+	return dialog.dialog({
+		title: "Periods",
+		autoOpen: false,
+		modal: true,
+		width: 600,
+		buttons: { Close: function() { $(this).dialog("close"); } }
+	});
 }
 
 function createTimeDialog(clock) {

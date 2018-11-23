@@ -26,13 +26,6 @@ public interface ClockModel extends Clock {
 
     public void setName(String name);
 
-    public void setNumber(int n);
-    public void changeNumber(int n);
-    public void setMinimumNumber(int n);
-    public void changeMinimumNumber(int n);
-    public void setMaximumNumber(int n);
-    public void changeMaximumNumber(int n);
-
     public void setTime(long ms);
     /**
      * Add time to the clock.
@@ -55,7 +48,6 @@ public interface ClockModel extends Clock {
 
     public static interface ClockSnapshotModel {
         public String getId();
-        public int getNumber();
         public long getTime();
         public boolean isRunning();
     }

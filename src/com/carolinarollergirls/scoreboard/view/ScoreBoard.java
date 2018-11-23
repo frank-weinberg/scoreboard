@@ -12,37 +12,51 @@ import java.util.List;
 
 import com.carolinarollergirls.scoreboard.Ruleset;
 import com.carolinarollergirls.scoreboard.event.ScoreBoardEventProvider;
+import com.carolinarollergirls.scoreboard.view.Timeout.TimeoutOwner;
 import com.carolinarollergirls.scoreboard.xml.XmlScoreBoard;
 
 public interface ScoreBoard extends ScoreBoardEventProvider {
     /**
      * Id of Team who called Timeout.
      *
-     * The Id is as returned from Team.getId().	 For Offical Timeouts, this returns an empty string.
+     * The Id is as returned from Team.getId().	For Offical Timeouts, this returns "O" (capital letter).
+     * For timeouts that have not yet had their type set or outside of a timeout, this returns an empty string.
      */
-    public String getTimeoutOwner();
+    public TimeoutOwner getTimeoutOwner();
 
     /**
      * If this Timeout is an Official Review.
      *
      * This is true if the current timeout is actually a team-requested Official Review.
-     * This is false if the current timeout is a normal team or official timeout.
+     * This is false if the current timeout is a normal team or official timeout or if we are not in a timeout.
      */
     public boolean isOfficialReview();
 
     /**
+     * If we are currently in a jam.
+     */
+    public boolean isInJam();
+    
+    /**
      * If in a Period.
      *
      * This returns true if any Period has started,
-     * until the Period is over.	A Period is considered
-     * "started" once the first Jam starts.	 A Period has
-     * not "ended" until its time has expired and the
-     * Jam clock has stopped.
+     * until the Period is over. A Period is considered
+     * "started" once the first Jam starts. A Period has
+     * not "ended" until its time has expired, the
+     * Jam clock has stopped and there are no timeouts 
+     * or official reviews related to the period ongoing.
      * Note that the Period may end and then re-start
-     * (the same Period) if Overtime is started.
+     * (the same Period) if Overtime is started or a 
+     * timeout is taken.
      */
     public boolean isInPeriod();
 
+    /**
+     * If we are currently in a timeout.
+     */
+    public boolean isInTimeout();
+    
     /**
      * If this bout is in Overtime.
      */
@@ -53,6 +67,14 @@ public interface ScoreBoard extends ScoreBoardEventProvider {
      */
     public boolean isOfficialScore();
 
+    public int getTotalNumberPeriods();
+
+    public int getNumberTimeouts();
+    
+    public long getGameDuration();
+    public long getGameWalltimeStart();
+    public long getGameWalltimeEnd();
+    
 // FIXME - clock and team getters should either return null or throw exception instead of creating new clock/team...
     public List<Clock> getClocks();
     public Clock getClock(String id);
@@ -60,14 +82,31 @@ public interface ScoreBoard extends ScoreBoardEventProvider {
     public List<Team> getTeams();
     public Team getTeam(String id);
 
+    public TimeoutOwner getTimeoutOwner(String id);
+    
+    public List<Period> getPeriods();
+    public Period getPeriod(String id);
+    public Period getCurrentPeriod();
+    
+    public Timeout getTimeout(String id);
+    public Timeout getCurrentTimeout();
+
+    public Jam getJam(String id);
+    public Jam getCurrentJam();
+
+    public TeamJam getTeamJam(String id);
+    public ScoringTrip getScoringTrip(String id);
+    public Fielding getFielding(String id);
+    public Skater getSkater(String id);
+    public Penalty getPenalty(String id);
+    public BoxTrip getBoxTrip(String id);
+    
     public Ruleset _getRuleset();
     public String getRuleset();
 
     public Settings getSettings();
     // Frontend (i.e. javascript only) settings.
     public FrontendSettings getFrontendSettings();
-
-    public Stats getStats();
 
     public XmlScoreBoard getXmlScoreBoard();
 
@@ -102,18 +141,17 @@ public interface ScoreBoard extends ScoreBoardEventProvider {
     public static final String EVENT_IN_OVERTIME = "InOvertime";
     public static final String EVENT_OFFICIAL_SCORE = "OfficialScore";
     public static final String EVENT_RULESET = "Ruleset";
-    public static final String EVENT_ADD_POLICY = "AddPolicy";
-    public static final String EVENT_REMOVE_POLICY = "RemovePolicy";
     public static final String EVENT_TIMEOUT_OWNER = "TimeoutOwner";
     public static final String EVENT_OFFICIAL_REVIEW = "OfficialReview";
+    public static final String EVENT_ADD_PERIOD = "AddPeriod";
+    public static final String EVENT_REMOVE_PERIOD = "RemovePeriod";
     public static final String EVENT_ADD_CLOCK = "AddClock";
     public static final String EVENT_REMOVE_CLOCK = "RemoveClock";
     public static final String EVENT_ADD_TEAM = "AddTeam";
     public static final String EVENT_REMOVE_TEAM = "RemoveTeam";
-    public static final String EVENT_SETTING = "Setting";
-
-    public static final String TIMEOUT_OWNER_OTO = "O";
-    public static final String TIMEOUT_OWNER_NONE = "";
+    public static final String EVENT_GAME_DURATION = "Duration";
+    public static final String EVENT_GAME_WALLTIME_START = "WalltimeStart";
+    public static final String EVENT_GAME_WALLTIME_END = "WalltimeEnd";
 
     public static final String BUTTON_START = "ScoreBoard.Button.StartLabel";
     public static final String BUTTON_STOP = "ScoreBoard.Button.StopLabel";

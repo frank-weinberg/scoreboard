@@ -17,9 +17,12 @@ public interface Skater extends ScoreBoardEventProvider {
     public String getId();
     public String getName();
     public String getNumber();
-    public String getPosition();
-    public boolean isPenaltyBox();
+    public Position getPosition();
+    public boolean isInBox();
     public String getFlags();
+    
+    public Fielding getCurrentFielding();
+    public Fielding getFielding(TeamJam jam);
     public List<Penalty> getPenalties();
     public Penalty getFOEXPPenalty();
 
@@ -30,19 +33,5 @@ public interface Skater extends ScoreBoardEventProvider {
     public static final String EVENT_FLAGS = "Flags";
 
     public static final String EVENT_PENALTY = "Penalty";
-    public static final String EVENT_REMOVE_PENALTY = "RemovePenalty";
     public static final String EVENT_PENALTY_FOEXP = "PenaltyFOEXP";
-    public static final String EVENT_PENALTY_REMOVE_FOEXP = "RemovePenaltyFOEXP";
-    public static final String EVENT_PENALTY_PERIOD = "Period";
-    public static final String EVENT_PENALTY_JAM = "Jam";
-    public static final String EVENT_PENALTY_CODE = "Code";
-
-    public static interface Penalty extends ScoreBoardEventProvider {
-        public String getId();
-        public int getPeriod();
-        public int getJam();
-        public String getCode();
-
-        public static final String SETTING_FO_LIMIT = "Rule.Penalties.NumberToFoulout";
-    }
 }

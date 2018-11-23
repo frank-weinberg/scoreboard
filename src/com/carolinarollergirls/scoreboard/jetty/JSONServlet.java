@@ -110,7 +110,6 @@ public class JSONServlet extends HttpServlet {
                     ic_time = ic_time - (ic_time % 1000);
                     ClockModel c = scoreBoardModel.getClockModel(Clock.ID_INTERMISSION);
                     c.reset();
-                    c.setNumber(0);
                     if (c.getMaximumTime() < ic_time) {
                         c.setMaximumTime(ic_time);
                     }

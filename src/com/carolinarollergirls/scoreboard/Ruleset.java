@@ -22,8 +22,8 @@ import com.carolinarollergirls.scoreboard.rules.IntegerRule;
 import com.carolinarollergirls.scoreboard.rules.Rule;
 import com.carolinarollergirls.scoreboard.rules.StringRule;
 import com.carolinarollergirls.scoreboard.rules.TimeRule;
+import com.carolinarollergirls.scoreboard.view.Penalty;
 import com.carolinarollergirls.scoreboard.view.ScoreBoard;
-import com.carolinarollergirls.scoreboard.view.Skater.Penalty;
 import com.carolinarollergirls.scoreboard.view.Team;
 
 public class Ruleset {

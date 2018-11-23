@@ -16,6 +16,7 @@ import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.xpath.XPath;
 
+import com.carolinarollergirls.scoreboard.defaults.DefaultSkaterModel;
 import com.carolinarollergirls.scoreboard.model.TeamModel;
 import com.carolinarollergirls.scoreboard.view.Skater;
 import com.carolinarollergirls.scoreboard.view.Team;
@@ -253,7 +254,7 @@ public class TeamsXmlDocumentManager extends DefaultXmlDocumentManager implement
             sName = editor.getText(skater.getChild("Name"));
             sNumber = editor.getText(skater.getChild("Number"));
             sFlags = editor.getText(skater.getChild("Flags"));
-            team.addSkaterModel(sId, sName, sNumber, sFlags);
+            team.addSkaterModel(new DefaultSkaterModel(team, sId, sName, sNumber, sFlags));
         }
     }
 

@@ -36,7 +36,7 @@ public class JSONStateSnapshotter implements JSONStateListener {
 
         // Fallback to current time.
         long startTime = System.currentTimeMillis();
-        Object periodState = state.get("ScoreBoard.Stats.Period(1).Jam(1).PeriodClockWalltimeStart");
+        Object periodState = state.get("ScoreBoard.GameWalltimeStart");
         if (periodState != null) {
             startTime = (long)periodState;
         }

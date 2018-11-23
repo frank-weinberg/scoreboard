@@ -18,8 +18,6 @@ public interface Clock extends ScoreBoardEventProvider {
     public String getName();
 
     public int getNumber();
-    public int getMinimumNumber();
-    public int getMaximumNumber();
 
     /**
      *

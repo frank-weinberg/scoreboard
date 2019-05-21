@@ -734,27 +734,54 @@ function openOptionsDialog() {
 	optionsDialog.dialog('open');
 }
 
-function prepareOptionsDialog(teamId) {
+function prepareOptionsDialog(teamId, onlySettings) {
 	var table = $('<table>').appendTo($('#OptionsDialog'));
-	$('<tr>').append($('<th>').text('Select Team')).appendTo(table);
-	$.each( [ '1', '2' ], function() {
-		var tId = String(this);
-		var row = $('<tr>').addClass('selectTeam'+tId).appendTo(table);
-		$('<td>').append($('<button>').addClass('name').toggleClass('selected', tId === teamId).button().click(function() {
-			if (tId !== teamId) {
-				window.location.href = window.location.href.replace( /[\?#].*|$/, '?team='+tId );
-			} else {
-				optionsDialog.dialog('close');
-			}
-		})).appendTo(row);
+
+	var setURL = function(tId, input) {
+		var updated = window.location.href.replace(/[\?#].*|$/, '?zoomable='+(input.prop("checked")?1:0));
+		if (tId != null) {
+			updated = updated + '&team='+tId;
+		}
+		if (updated != window.location.href) {
+			window.location.href = updated;
+		} else {
+			optionsDialog.dialog('close');
+		}
+	};
+
+	var zoomable = $("<label/><input type='checkbox'/>").addClass("ui-button-small");
+	var id = newUUID();
+	zoomable.first().attr("for", id);
+	var input = zoomable.last().attr("id", id).button();
+	input.prop("checked", _windowFunctions.checkParam("zoomable", 1));
+	zoomable.button("option", "label", "Pinch Zoom " + (input.prop("checked")?"Enabled":"Disabled"));
+	input.change();
+	input.change(function(e) {
+		zoomable.button("option", "label", "Pinch Zoom " + (input.prop("checked")?"Enabled":"Disabled"));
+		if (onlySettings) {
+			setURL(null, input);
+		}
 	});
 
-	WS.Register(['ScoreBoard.Team(*).Name', 'ScoreBoard.Team(*).AlternateName(operator)'], function(k, v) {
-		var displayName = 'Team ' + k.Team + ': ' + WS.state['ScoreBoard.Team('+k.Team+').Name'];
-		var altName = WS.state['ScoreBoard.Team('+k.Team+').AlternateName(operator)'];
-		if (altName != null) { displayName = displayName + ' / ' + altName; }
-		$('.selectTeam'+k.Team+' .name span').text(displayName);
-	});
+	if (!onlySettings) {
+		$('<tr>').append($('<th>').text('Select Team')).appendTo(table);
+		$.each( [ '1', '2' ], function() {
+			var tId = String(this);
+			var row = $('<tr>').addClass('selectTeam'+tId).appendTo(table);
+			$('<td>').append($('<button>').addClass('name').toggleClass('selected', tId === teamId).button().click(function() {
+				setURL(tId, input);
+			})).appendTo(row);
+		});
+		$('<tr>').append($('<th>').text('Options')).appendTo(table);
+
+		WS.Register(['ScoreBoard.Team(*).Name', 'ScoreBoard.Team(*).AlternateName(operator)'], function(k, v) {
+			var displayName = 'Team ' + k.Team + ': ' + WS.state['ScoreBoard.Team('+k.Team+').Name'];
+			var altName = WS.state['ScoreBoard.Team('+k.Team+').AlternateName(operator)'];
+			if (altName != null) { displayName = displayName + ' / ' + altName; }
+			$('.selectTeam'+k.Team+' .name span').text(displayName);
+		});
+	}
+	$('<tr>').append($('<td>').append(zoomable)).appendTo(table);
 	
 	optionsDialog = $('#OptionsDialog').dialog({
 		modal: true,

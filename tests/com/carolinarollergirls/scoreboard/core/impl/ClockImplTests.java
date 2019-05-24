@@ -70,7 +70,6 @@ public class ClockImplTests {
 
         assertEquals(ID, clock.getId());
         assertEquals(ID, clock.getName());
-        assertFalse(clock.isMasterClock());
         assertFalse(clock.isCountDirectionDown());
         assertFalse(clock.isRunning());
 
@@ -126,7 +125,6 @@ public class ClockImplTests {
 
     @Test
     public void testSetting_ClockSync() {
-        //add a master clock
         ClockImpl clock2 = new ClockImpl(sb, Clock.ID_TIMEOUT);
         sb.getSettings().set(Clock.SETTING_SYNC, String.valueOf(true));
         clock.setMaximumTime(10000);
@@ -138,8 +136,12 @@ public class ClockImplTests {
         clock.setTime(4200);
         assertEquals(4200, clock.getTime());
 
-        //when the clocks are started the non-master clock is synced to the master clock
+        //the first clock started has its time rounded
         clock2.start();
+        assertEquals(3000, clock2.getTime());
+        advance(400);
+
+        //when the clocks are started the just started clock is synced to the already running
         clock.start();
         assertEquals(4400, clock.getTime());
 
